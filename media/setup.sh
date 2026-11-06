@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Everything on Google Cloud in one go (docs/setup.md, part 1). Run from Cloud Shell in the
 # project that holds the credits:
-#   git clone --depth 1 https://github.com/addvaluewithai-hub/ops 2>/dev/null || git -C ops pull; bash ops/media/setup.sh
+#   rm -rf ops && git clone --depth 1 https://github.com/addvaluewithai-hub/ops && bash ops/media/setup.sh
 # 1. makes SLOP_TOKEN (once) and keeps it in Secret Manager
 # 2. deploys slop-media (deploy.sh)
 # 3. makes one test picture

@@ -16,7 +16,7 @@ Open **Cloud Shell** in the project that holds the credits (the same one as `lea
 paste:
 
 ```bash
-git clone --depth 1 https://github.com/addvaluewithai-hub/ops 2>/dev/null || git -C ops pull; bash ops/media/setup.sh
+rm -rf ops && git clone --depth 1 https://github.com/addvaluewithai-hub/ops && bash ops/media/setup.sh
 ```
 
 It does everything:
@@ -28,7 +28,7 @@ It does everything:
 - Ends with a box showing whether the picture worked, plus **`MEDIA_URL`** and **`SLOP_TOKEN`**.
   Keep both in your password manager.
 
-Running it again is safe: it keeps the token and redeploys.
+Running it again is safe: it downloads a fresh copy of the code, keeps the token and redeploys.
 
 - **Image models**, tried in this order (IDs from Google Cloud's model pages):
   `gemini-3.1-flash-lite-image` (Nano Banana 2 Lite, the fastest, 1K only),
