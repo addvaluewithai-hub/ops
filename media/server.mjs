@@ -19,7 +19,7 @@ export function mediaConfig(env = process.env) {
     // The first one the project has wins; set IMAGE_MODELS at deploy to pin the exact IDs.
     imageModels: list(
       env.IMAGE_MODELS,
-      'gemini-3.1-flash-image-lite-preview,gemini-3.1-flash-image-preview,gemini-2.5-flash-image',
+      'gemini-3.1-flash-lite-image,gemini-3.1-flash-image,gemini-2.5-flash-image',
     ),
     videoRegion: env.VIDEO_REGION || 'us-central1',
     videoModel: env.VIDEO_MODEL || 'veo-3.1-fast-generate-001',
