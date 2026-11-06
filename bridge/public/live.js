@@ -13,7 +13,9 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
   let playAt = 0;
   let sources = [];
   let mic = null;
-  let resumeHandle = null;
+  // The resumption handle lives in sessionStorage, so a page refresh continues the same
+  // conversation instead of waking him up again.
+  let resumeHandle = sessionStorage.getItem('slop-resume') || null;
   let ready = false;
   const state = (s, detail) => onState?.(s, detail);
 
@@ -100,8 +102,10 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
         state('live');
         if (!mic) await startMic();
       }
-      if (m.sessionResumptionUpdate?.resumable && m.sessionResumptionUpdate.newHandle)
+      if (m.sessionResumptionUpdate?.resumable && m.sessionResumptionUpdate.newHandle) {
         resumeHandle = m.sessionResumptionUpdate.newHandle;
+        sessionStorage.setItem('slop-resume', resumeHandle);
+      }
       if (m.error) state('error', m.error.message ?? JSON.stringify(m.error));
       const c = m.serverContent;
       if (c?.interrupted) {
@@ -131,6 +135,11 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
     };
     socket.onclose = (e) => {
       ready = false;
+      // A refused resume (an expired handle) must not loop: start fresh next time.
+      if (e.code === 1007 || e.code === 1008) {
+        resumeHandle = null;
+        sessionStorage.removeItem('slop-resume');
+      }
       state('closed', `${e.code} ${e.reason}`);
     };
     socket.onerror = () => state('error', 'socket');

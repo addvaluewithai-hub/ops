@@ -1,6 +1,6 @@
 // What SLOP can do, as Gemini Live function declarations (live.mjs turns them into Gemini's
 // shape). None of them block: the bridge answers at once and sends the outcome later as a note.
-import { SECTION_ID } from './site.mjs';
+import { SECTION_ID, STEPS } from './site.mjs';
 
 export const MOODS = ['angry', 'furious', 'bored', 'contempt', 'suspicious', 'thinking', 'surprised', 'pleased', 'calm'];
 
@@ -33,15 +33,16 @@ export const TOOLS = [
   {
     name: 'build',
     description:
-      'Make the intern build or change part of the site. key "site" writes the wireframe ' +
-      '(site.json with the section list, and tokens.css, the design system) from the spec. A ' +
-      'section id (lowercase, hyphens: hero, menu, story, visit) builds or rebuilds that ' +
-      'section. key "scripts" writes the scroll choreography between sections. Returns at ' +
-      'once; you are told when it is done. Refused without a real spec.',
+      'Make the intern build or change part of the site. In order: key "design" writes the ' +
+      'design system (tokens.css: colours, typefaces, spacing) and shows it as a style tile; key ' +
+      '"structure" writes the section list with a one-line plan each and shows them as wireframe ' +
+      'boxes; a section id (lowercase, hyphens: hero, menu, story, visit) builds or rebuilds that ' +
+      'section; key "scripts" writes the scroll choreography between sections at the end. Returns ' +
+      'at once; you are told when it is done. Refused without a real brief.',
     parameters: {
       type: 'object',
       properties: {
-        key: { type: 'string', description: '"site", "scripts" or a section id' },
+        key: { type: 'string', description: '"design", "structure", "scripts" or a section id' },
         brief: {
           type: 'string',
           description:
@@ -64,8 +65,7 @@ export const TOOLS = [
   },
 ];
 
-export const buildKey = (key) =>
-  key === 'site' || key === 'scripts' || SECTION_ID.test(String(key));
+export const buildKey = (key) => STEPS.has(key) || SECTION_ID.test(String(key));
 
 /** Why a build call is refused, or '' when it may go ahead. SLOP reads this out, so it is in character. */
 export function refuseBuild({ key, brief }) {
@@ -78,16 +78,20 @@ export function refuseBuild({ key, brief }) {
 
 /** The intern's prompt for one build call. */
 export function internPrompt({ key, brief }) {
-  if (key === 'site')
-    return `Wireframe task. Write site.json (title and the ordered section ids) and tokens.css (the complete design system: fonts via @import, colour, type scale, spacing, radius, motion, base element styles). Do not write any section file.\n\nBrief: ${brief}`;
+  if (key === 'design')
+    return `Design task. Write tokens.css: the complete design system this site will use. Follow the "Design task" rules in your brief (the required variable names, fonts via @import, base element styles). Also set "title" in site.json to the site's name (keep any other fields). Nothing else.\n\nBrief: ${brief}`;
+  if (key === 'structure' || key === 'site')
+    return `Structure task. Write site.json only: the title, the ordered section ids, and "plan": one line per section saying what goes in it and its one bold idea. Read tokens.css first. Do not write any section file.\n\nBrief: ${brief}`;
   if (key === 'scripts')
     return `Write scripts.js: the scroll choreography that joins the existing sections (GSAP and ScrollTrigger are globals). Read tokens.css and every sections/*.html first. Keep it tasteful and respect prefers-reduced-motion.\n\nBrief: ${brief}`;
-  return `Build or update sections/${key}.html. Read tokens.css and site.json first, and the current sections/${key}.html if it exists. One <section id="${key}"> with its scoped <style>. Use <img data-gen="..."> for any picture.\n\nBrief: ${brief}`;
+  return `Build or update sections/${key}.html. Read tokens.css and site.json first (its plan line for ${key}), and the current sections/${key}.html if it exists. One <section id="${key}"> with its scoped <style>. Use <img data-gen="..."> for any picture, always with a fixed aspect-ratio in CSS.\n\nBrief: ${brief}`;
 }
 
 /** What the session's system instruction says about the project right now. */
-export function projectNote(site, existing) {
-  if (!site.sections.length) return 'The project is empty: nothing has been built yet.';
-  const lines = site.sections.map((id) => `${id}: ${existing.has(id) ? 'built' : 'wireframe only'}`);
-  return `The project "${site.title}" has these sections, in order:\n${lines.join('\n')}`;
+export function projectNote(site, existing, hasDesign) {
+  if (!hasDesign && !site.sections.length) return 'The project is empty: nothing has been built yet. Start with the spec, then "design".';
+  const lines = site.sections.map((id) => `${id}: ${existing.has(id) ? 'built' : 'wireframe only'}${site.plan[id] ? ` (plan: ${site.plan[id]})` : ''}`);
+  return `${hasDesign ? 'The design system exists.' : 'There is no design system yet.'} ${
+    site.sections.length ? `The project "${site.title}" has these sections, in order:\n${lines.join('\n')}` : 'There is no structure yet.'
+  }`;
 }
