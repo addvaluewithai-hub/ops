@@ -10,6 +10,8 @@ const WS =
 export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterrupted }) {
   let socket = null;
   let out = null; // AudioContext for playback
+  let analyser = null; // taps the playback so the eye can move with the voice
+  let levelBuf = null;
   let playAt = 0;
   let sources = [];
   let mic = null;
@@ -33,7 +35,7 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
     }
     const node = out.createBufferSource();
     node.buffer = buffer;
-    node.connect(out.destination);
+    node.connect(analyser);
     playAt = Math.max(playAt, out.currentTime + 0.02);
     node.start(playAt);
     const at = playAt;
@@ -83,6 +85,13 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
   async function connect() {
     state('connecting');
     out ||= new AudioContext({ sampleRate: 24000 });
+    if (!analyser) {
+      analyser = out.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.4;
+      analyser.connect(out.destination);
+      levelBuf = new Float32Array(analyser.fftSize);
+    }
     await out.resume();
     const t = await fetch('/api/live-token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
       .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json()).error || r.status))));
@@ -154,6 +163,14 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
     /** Something that should make him answer. */
     say(text) {
       send({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true } });
+    },
+    /** Loudness of his voice right now, 0..1. Read it every frame. */
+    level() {
+      if (!analyser) return 0;
+      analyser.getFloatTimeDomainData(levelBuf);
+      let sum = 0;
+      for (let i = 0; i < levelBuf.length; i++) sum += levelBuf[i] * levelBuf[i];
+      return Math.min(1, Math.sqrt(sum / levelBuf.length) * 5);
     },
     mute(on) {
       if (mic) mic.muted = on;

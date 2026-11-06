@@ -42,11 +42,29 @@ display face, links, buttons, `img { max-width: 100%; display: block }`.
 
 ## Structure task
 
-Write `site.json` only: the title, four to seven section ids in order, and a `plan` line for
-each. Unwritten sections show up on screen as grey boxes with that line, which is the
-wireframe the client reacts to. Do not write section files.
+Write `site.json` (the title, four to seven section ids in order, and a `plan` line for each),
+then a **wireframe** for every section in `sections/<id>.html`: a real low-fidelity layout
+the client reacts to before any real design exists. A wireframe is
+`<section id="<id>" data-wire>` with a scoped `<style>` for its grid, built only from these
+grey primitives (their look is provided; you lay them out):
+
+- `<div class="wf-h1">` / `wf-h2` / `wf-h3`: headline bars. `<div class="wf-p"><i></i></div>`:
+  a paragraph of lines. `<span class="wf-label">eyebrow text</span>` for small real labels.
+- `<div class="wf-img">` (16:9; add `portrait`, `square` or `wide`): a picture box with an X.
+- `<span class="wf-btn">Button text</span>` (add `solid` for the primary), `wf-nav` with
+  `<i></i>` items, `wf-icon`, `wf-card`.
+- `<div class="wf-note">one line on the idea</div>` in the corner, in plain words.
+
+Use real proportions, real placement and real hierarchy: the grid, which side the picture is
+on, how big the headline is, how many items, the section's height. Short real words are fine
+where they help (a button label, an eyebrow); otherwise bars. No colours, no fonts, no
+decoration: that is the design system's job, and the real section comes later.
 
 ## Section task
+
+Read the section's wireframe first and keep its layout, proportions and content unless the
+brief says to change them: the client approved that wireframe. Replace the whole file (drop
+`data-wire` and every `wf-` class).
 
 Every section lands live while the client watches, so it must not jump around:
 

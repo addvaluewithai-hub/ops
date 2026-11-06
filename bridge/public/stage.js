@@ -3,14 +3,15 @@
 //   - Bridge events (intern steps, pictures landing) become short notes to SLOP, so he can
 //     react to what the intern is doing without ever being asked to wait.
 //   - The site slides in on the first build and stays; SLOP's gaze decides how much of it shows.
-import { createEye, MOODS } from '/eye.js';
+import { createEye, GESTURE_NAMES, MOODS } from '/eye.js';
 import { createLive } from '/live.js';
 
 const $ = (id) => document.getElementById(id);
 const body = document.body;
 const eye = createEye(document.querySelector('#eye canvas'));
-eye.mood('angry', 0.7);
+eye.mood('smug', 0.8);
 eye.lookAt(0, 0);
+const eyeCanvas = document.querySelector('#eye canvas');
 
 let captions = true;
 let building = new Set();
@@ -47,11 +48,12 @@ function heard(text) {
 }
 
 // ---- the face ---------------------------------------------------------------------------
-function setMood(mood, intensity = 0.8) {
+function setMood(mood, intensity = 0.8, gesture = '') {
   if (!MOODS[mood]) return false;
   eye.mood(mood, intensity);
+  if (gesture) eye.gesture(gesture);
   body.classList.toggle('furious', mood === 'furious');
-  ops('o-mood', `${mood} ${Math.round(intensity * 10) / 10}`);
+  ops('o-mood', `${mood} ${Math.round(intensity * 10) / 10}${gesture ? ` + ${gesture}` : ''}`);
   return true;
 }
 
@@ -99,7 +101,6 @@ fetch('/api/state')
 const live = createLive({
   onSaid: said,
   onHeard: heard,
-  onLevel: (level) => eye.speak(level),
   onInterrupted: () => {
     saidBuffer = '';
     $('said').textContent = '';
@@ -110,7 +111,10 @@ const live = createLive({
     if (s === 'closed' || s === 'goaway') setTimeout(() => live.open || live.connect().catch(() => {}), s === 'goaway' ? 100 : 2500);
   },
   onTool: async (name, args) => {
-    if (name === 'set_mood') return setMood(String(args.mood), Number(args.intensity ?? 0.8)) ? { ok: true, scheduling: 'SILENT' } : { error: `unknown mood; use one of ${Object.keys(MOODS).join(', ')}` };
+    if (name === 'set_mood')
+      return setMood(String(args.mood), Number(args.intensity ?? 0.8), String(args.gesture ?? ''))
+        ? { ok: true, scheduling: 'SILENT' }
+        : { error: `unknown mood; use one of ${Object.keys(MOODS).join(', ')}` };
     if (name === 'look_at') return { ok: lookAt(String(args.target ?? 'user')), scheduling: 'SILENT' };
     if (name === 'show_site') {
       showSite(Boolean(args.visible));
@@ -130,6 +134,14 @@ const live = createLive({
     return { error: `unknown tool ${name}` };
   },
 });
+
+// Every frame: his voice moves the eye (pupil, lids, a small swell of the whole eye).
+(function pulse() {
+  const level = live.level();
+  eye.speak(level);
+  eyeCanvas.style.transform = `scale(${(1 + level * 0.045).toFixed(4)})`;
+  requestAnimationFrame(pulse);
+})();
 
 // ---- bridge events -----------------------------------------------------------------------
 function internLine(text) {
@@ -202,6 +214,8 @@ addEventListener('keydown', (e) => {
     live.connect().catch((err) => ops('o-live', err.message, 'bad'));
   }
   if (/^[1-9]$/.test(k) && MOOD_KEYS[+k - 1]) setMood(MOOD_KEYS[+k - 1], 0.9);
+  if (k === 'e') eye.gesture('eyeroll');
+  if (k === 'g') eye.gesture(GESTURE_NAMES[Math.floor(Math.random() * GESTURE_NAMES.length)]);
 });
 
 // The eye follows the mouse a little while he is looking at you.
@@ -220,8 +234,8 @@ $('gate').addEventListener('click', async () => {
   try {
     await live.connect();
     gate.classList.add('gone');
-    eye.blink();
-    setMood('angry', 0.9);
+    eye.gesture('slowblink');
+    setMood('smug', 0.9);
   } catch (error) {
     gate.classList.add('bad');
     gate.querySelector('span').textContent = `He won't wake up: ${error.message}`;

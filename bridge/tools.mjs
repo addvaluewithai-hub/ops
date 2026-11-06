@@ -2,19 +2,22 @@
 // shape). None of them block: the bridge answers at once and sends the outcome later as a note.
 import { SECTION_ID, STEPS } from './site.mjs';
 
-export const MOODS = ['angry', 'furious', 'bored', 'contempt', 'suspicious', 'thinking', 'surprised', 'pleased', 'calm'];
+export const MOODS = ['smug', 'deadpan', 'bored', 'suspicious', 'contempt', 'thinking', 'angry', 'furious', 'surprised', 'pleased', 'calm'];
+export const GESTURES = ['eyeroll', 'glance', 'slowblink', 'squint', 'doubletake', 'wide'];
 
 export const TOOLS = [
   {
     name: 'set_mood',
     description:
-      'Set your facial expression. Call it silently and often so your face matches what you say: ' +
-      'before a rant, when something impresses you, when you are waiting for the intern.',
+      'Set your facial expression, and optionally play a short gesture on top. Call it silently ' +
+      'and often so your face matches your tone: before a verdict, when something is absurd, ' +
+      'when you are waiting for the intern.',
     parameters: {
       type: 'object',
       properties: {
         mood: { type: 'string', enum: MOODS },
         intensity: { type: 'number', description: '0 to 1, how strong' },
+        gesture: { type: 'string', enum: GESTURES, description: 'A short move to play now' },
       },
       required: ['mood'],
     },
@@ -35,9 +38,10 @@ export const TOOLS = [
     description:
       'Make the intern build or change part of the site. In order: key "design" writes the ' +
       'design system (tokens.css: colours, typefaces, spacing) and shows it as a style tile; key ' +
-      '"structure" writes the section list with a one-line plan each and shows them as wireframe ' +
-      'boxes; a section id (lowercase, hyphens: hero, menu, story, visit) builds or rebuilds that ' +
-      'section; key "scripts" writes the scroll choreography between sections at the end. Returns ' +
+      '"structure" writes the section list with a one-line plan each and a real low-fidelity ' +
+      'wireframe of every section (layout, proportions, where the picture and headline go); a ' +
+      'section id (lowercase, hyphens: hero, menu, story, visit) replaces that wireframe with the ' +
+      'real section; key "scripts" writes the scroll choreography between sections at the end. Returns ' +
       'at once; you are told when it is done. Refused without a real brief.',
     parameters: {
       type: 'object',
@@ -81,7 +85,7 @@ export function internPrompt({ key, brief }) {
   if (key === 'design')
     return `Design task. Write tokens.css: the complete design system this site will use. Follow the "Design task" rules in your brief (the required variable names, fonts via @import, base element styles). Also set "title" in site.json to the site's name (keep any other fields). Nothing else.\n\nBrief: ${brief}`;
   if (key === 'structure' || key === 'site')
-    return `Structure task. Write site.json only: the title, the ordered section ids, and "plan": one line per section saying what goes in it and its one bold idea. Read tokens.css first. Do not write any section file.\n\nBrief: ${brief}`;
+    return `Structure task. Write site.json (the title, the ordered section ids, and "plan": one line per section saying what goes in it and its one bold idea), then a wireframe for every section in sections/<id>.html, following the "Structure task" rules in your brief (the wf- primitives, data-wire, real proportions). Read tokens.css first.\n\nBrief: ${brief}`;
   if (key === 'scripts')
     return `Write scripts.js: the scroll choreography that joins the existing sections (GSAP and ScrollTrigger are globals). Read tokens.css and every sections/*.html first. Keep it tasteful and respect prefers-reduced-motion.\n\nBrief: ${brief}`;
   return `Build or update sections/${key}.html. Read tokens.css and site.json first (its plan line for ${key}), and the current sections/${key}.html if it exists. One <section id="${key}"> with its scoped <style>. Use <img data-gen="..."> for any picture, always with a fixed aspect-ratio in CSS.\n\nBrief: ${brief}`;
