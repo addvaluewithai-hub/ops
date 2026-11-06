@@ -57,12 +57,41 @@ const escape = (s) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 const WIREFRAME = (id) =>
   `<div class="slop-wire"><span>${escape(id.toUpperCase())}</span></div>`;
 
-// Reloads the preview when a file changes, keeping the scroll position.
-const LIVE = `<script>(()=>{const k='slop-scroll';const y=sessionStorage.getItem(k);
-if(y)addEventListener('load',()=>scrollTo(0,+y));let t;
+// Keeps the preview live without flicker: a changed section is fetched and swapped in place
+// with a short "develop" reveal; only tokens.css and scripts.js need a full reload. The page
+// also tells its parent (the stage) which section is on screen and when one lands.
+const LIVE = `<style>
+[data-slop-section]{transition:opacity .9s ease,filter .9s ease}
+[data-slop-section].slop-developing{opacity:0;filter:blur(14px) saturate(0)}
+</style><script>(()=>{
+const k='slop-scroll';const y=sessionStorage.getItem(k);if(y)addEventListener('load',()=>scrollTo(0,+y));
+const tell=(m)=>parent!==window&&parent.postMessage({slop:true,...m},'*');
+let full;const reload=()=>{clearTimeout(full);full=setTimeout(()=>{sessionStorage.setItem(k,scrollY);location.reload()},200)};
+const swapping=new Map();
+async function swap(id){
+  const html=await (await fetch('/site/',{cache:'no-store'})).text();
+  const fresh=new DOMParser().parseFromString(html,'text/html').querySelector('[data-slop-section="'+id+'"]');
+  const here=document.querySelector('[data-slop-section="'+id+'"]');
+  if(!fresh)return reload();if(!here)return reload();
+  here.classList.add('slop-developing');
+  await new Promise(r=>setTimeout(r,250));
+  here.innerHTML=fresh.innerHTML;
+  for(const old of here.querySelectorAll('script')){const s=document.createElement('script');for(const a of old.attributes)s.setAttribute(a.name,a.value);s.textContent=old.textContent;old.replaceWith(s);}
+  requestAnimationFrame(()=>requestAnimationFrame(()=>here.classList.remove('slop-developing')));
+  if(window.ScrollTrigger)ScrollTrigger.refresh();
+  tell({type:'landed',id});
+}
 const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');
-ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.type!=='file')return;clearTimeout(t);
-t=setTimeout(()=>{sessionStorage.setItem(k,scrollY);location.reload()},150)};})();</script>`;
+ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.type!=='file')return;
+  const sec=/^sections\\/([a-z0-9-]+)\\.html$/.exec(m.path);
+  if(sec){clearTimeout(swapping.get(sec[1]));swapping.set(sec[1],setTimeout(()=>swap(sec[1]),150));return;}
+  if(/^(img|video)\\//.test(m.path))return;
+  reload();};
+addEventListener('message',e=>{const m=e.data;if(!m||!m.slop)return;
+  if(m.type==='scrollTo'){const el=document.querySelector('[data-slop-section="'+m.id+'"]');el&&el.scrollIntoView({behavior:'smooth',block:'start'});}});
+const seen=new IntersectionObserver(es=>{for(const x of es)if(x.isIntersecting)tell({type:'visible',id:x.target.dataset.slopSection});},{threshold:.5});
+addEventListener('load',()=>document.querySelectorAll('[data-slop-section]').forEach(el=>seen.observe(el)));
+})();</script>`;
 
 /** The whole page: tokens, each section (or its wireframe), the choreography, live reload. */
 export async function assemble(dir, { live = true } = {}) {

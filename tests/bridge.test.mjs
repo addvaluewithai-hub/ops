@@ -106,9 +106,20 @@ test('a build streams to the browser and its pictures are filled in', async () =
     const started = await fetch(`${base}/api/build`, {
       method: 'POST',
       headers: { cookie, 'content-type': 'application/json' },
-      body: JSON.stringify({ key: 'hero', prompt: 'build the hero' }),
+      body: JSON.stringify({ key: 'hero', brief: 'too short' }),
     });
-    assert.equal(started.status, 202);
+    assert.equal(started.status, 400);
+    assert.match((await started.json()).error, /Spec incomplete/);
+    const started2 = await fetch(`${base}/api/build`, {
+      method: 'POST',
+      headers: { cookie, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        key: 'hero',
+        brief:
+          'A tiny late-night ramen bar called Slurp in Cairo. For hungry night owls who want to feel the loud Japanese street poster energy. Giant red title, one generated picture, the opening hours and a see-the-menu button.',
+      }),
+    });
+    assert.equal(started2.status, 202);
     await finished;
     ws.close();
 

@@ -11,6 +11,8 @@ export function bridgeConfig(env = process.env) {
     mediaUrl: (env.MEDIA_URL || '').replace(/\/$/, ''),
     geminiKey: env.GEMINI_API_KEY || '',
     liveModel: env.GEMINI_LIVE_MODEL || 'gemini-3.8-live',
+    // A Gemini prebuilt voice. Fenrir is the gravelly one.
+    voice: env.SLOP_VOICE || 'Fenrir',
     claudeBin: env.CLAUDE_BIN || 'claude',
     claudeModel: env.CLAUDE_MODEL || 'sonnet',
     claudeMaxTurns: Number(env.CLAUDE_MAX_TURNS) || 60,
