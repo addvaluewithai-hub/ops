@@ -72,7 +72,28 @@ function lookAt(target) {
 function showSite(visible) {
   body.classList.toggle('showing', visible);
   if (!visible) lookAt('user');
+  try {
+    localStorage.setItem('slop-showing', visible ? '1' : '');
+  } catch {
+    // private window
+  }
 }
+
+// After a refresh, the site comes back if it was showing or if anything has been built.
+fetch('/api/state')
+  .then((r) => r.json())
+  .then((s) => {
+    let remembered = '';
+    try {
+      remembered = localStorage.getItem('slop-showing') ?? '';
+    } catch {
+      // private window
+    }
+    if (remembered === '1' || (remembered === '' && (s.site.sections.length || s.design))) showSite(true);
+    for (const key of Object.keys(s.building)) building.add(key);
+    updateBuilding();
+  })
+  .catch(() => {});
 
 // ---- the voice --------------------------------------------------------------------------
 const live = createLive({
@@ -151,11 +172,14 @@ function connectBridge() {
 }
 connectBridge();
 
-// The site tells us when a section lands or scrolls into view.
+// The site tells us when a section lands, when it is about to reload (so we fade instead of
+// flash) and when it is ready again.
 addEventListener('message', (e) => {
   const m = e.data;
   if (!m || !m.slop) return;
   if (m.type === 'landed') eye.blink();
+  if (m.type === 'reloading') $('site').classList.add('reloading');
+  if (m.type === 'ready') $('site').classList.remove('reloading');
 });
 
 // ---- operator ---------------------------------------------------------------------------

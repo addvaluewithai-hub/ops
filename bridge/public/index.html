@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>SLOP</title>
 <style>
   :root { color-scheme: dark; --red: #e0261f; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
@@ -16,6 +17,7 @@
     opacity: 0; transform: translateX(6%) scale(.98); filter: blur(18px) saturate(.4);
     transition: opacity 1.4s cubic-bezier(.2,.8,.2,1), transform 1.4s cubic-bezier(.2,.8,.2,1), filter 1.4s ease; pointer-events: none; }
   body.showing #site { opacity: 1; transform: none; filter: none; pointer-events: auto; }
+  body.showing #site.reloading { opacity: .35; filter: blur(6px); transition-duration: .3s; }
   /* A dark veil over the site so the eye stays readable; thins when SLOP looks at the site. */
   #veil { position: fixed; inset: 0; pointer-events: none; opacity: 0;
     background: radial-gradient(60% 60% at 80% 22%, rgba(0,0,0,.92), rgba(0,0,0,.35) 70%, rgba(0,0,0,.2));

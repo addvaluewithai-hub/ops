@@ -48,15 +48,22 @@ test('project paths cannot leave the project or read hidden folders', () => {
   assert.equal(projectPath('/p', 'img/a.png'), '/p/img/a.png');
 });
 
-test('unwritten sections show as wireframe boxes', async () => {
+test('a design alone shows as a style tile; unwritten sections as wireframe boxes with their plan', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'slop-'));
   await ensureProject(dir);
-  await writeFile(join(dir, 'site.json'), '{"title":"Slurp","sections":["hero","menu","Bad Id"]}');
-  await writeFile(join(dir, 'sections', 'hero.html'), '<section id="hero">hi</section>');
-  const page = await assemble(dir);
-  assert.match(page, /<section id="hero">hi<\/section>/);
-  assert.match(page, /class="slop-wire"><span>MENU</);
+  await writeFile(join(dir, 'tokens.css'), ':root{--color-bg:#111;--color-accent:oklch(70% .2 30);--font-display:"Anton",sans-serif;--space-1:4px}');
+  let page = await assemble(dir);
+  assert.match(page, /data-slop-section="design"/);
+  assert.match(page, /slop-swatch.*--color-accent/);
+  assert.match(page, /slop-font.*--font-display/);
+  assert.doesNotMatch(page, /slop-swatch.*--space-1/);
+  await writeFile(join(dir, 'site.json'), '{"title":"Slurp","sections":["hero","menu","Bad Id","design"],"plan":{"menu":"Six bowls, one photo each"}}');
+  await writeFile(join(dir, 'sections', 'hero.html'), '<section id="hero">hi <img data-gen="x" alt="" src=""></section>');
+  page = await assemble(dir);
+  assert.match(page, /<section id="hero">hi <img class="slop-pending" data-gen="x" alt="" src="data:image\/gif/);
+  assert.match(page, /class="slop-wire"><span>MENU<\/span><small>Six bowls, one photo each<\/small>/);
   assert.doesNotMatch(page, /Bad Id/);
+  assert.doesNotMatch(page, /class="slop-tile"/);
 });
 
 test('the quick tunnel address is read from cloudflared output', () => {

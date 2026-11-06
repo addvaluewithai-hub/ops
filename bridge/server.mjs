@@ -114,6 +114,7 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
         project: config.project,
         site: await readSite(dir),
         building: Object.fromEntries(building),
+        design: await readFile(join(dir, 'tokens.css'), 'utf8').then(Boolean, () => false),
         tunnel: state.tunnelUrl,
         media: Boolean(config.mediaUrl),
         live: Boolean(config.geminiKey),
@@ -121,7 +122,8 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
     if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
     const input = await body(req);
     if (path === '/api/live-token') {
-      const note = projectNote(await readSite(dir), await builtSections());
+      const hasDesign = await readFile(join(dir, 'tokens.css'), 'utf8').then(Boolean, () => false);
+      const note = projectNote(await readSite(dir), await builtSections(), hasDesign);
       const setup = liveSetup({
         instruction: `${await persona()}\n\n## Right now\n\n${note}`,
         voice: input.voice || config.voice,
@@ -193,6 +195,11 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
     }
     if (path.startsWith('/site/')) {
       const file = await serveFile(dir, path.slice('/site/'.length));
+      // Before the design step there is no tokens.css; an empty sheet beats a 404 in the console.
+      if (!file && path.startsWith('/site/tokens.css')) {
+        res.writeHead(200, { 'content-type': 'text/css', 'cache-control': 'no-store' });
+        return res.end('');
+      }
       if (!file) return json(res, 404, { error: 'not found' });
       res.writeHead(200, { 'content-type': file.type, 'cache-control': 'no-store' });
       return res.end(file.body);

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>SLOP check</title>
 <style>
   :root { color-scheme: dark; --red: #e22; --dim: #666; --line: #262626; }
@@ -45,7 +46,7 @@
 
   <h2>3 · Claude Code (the intern)</h2>
   <textarea id="brief">Wireframe for a one-page site for a tiny late-night ramen bar called "Slurp" in Cairo. Sections: hero, menu, story, visit. Dark, loud, Japanese street poster energy.</textarea>
-  <div class="row"><button id="build">Build the wireframe</button><button id="hero">Then build the hero</button></div>
+  <div class="row"><button id="design">1 design</button><button id="build">2 structure</button><button id="hero">3 hero</button></div>
 
   <h2>Events</h2>
   <div id="log"></div>
@@ -109,7 +110,8 @@
       log(`picture in ${r.ms} ms from ${r.model}`, 'ok');
     } catch (error) { log(`picture failed: ${error.message}`, 'bad'); }
   };
-  $('build').onclick = () => post('/api/build', { key: 'site', brief: $('brief').value }).catch((e) => log(e.message, 'bad'));
+  $('design').onclick = () => post('/api/build', { key: 'design', brief: $('brief').value }).catch((e) => log(e.message, 'bad'));
+  $('build').onclick = () => post('/api/build', { key: 'structure', brief: $('brief').value }).catch((e) => log(e.message, 'bad'));
   $('hero').onclick = () => post('/api/build', { key: 'hero', brief: `${$('brief').value} Include one generated picture.` }).catch((e) => log(e.message, 'bad'));
 
   // Gemini Live: mint a token, open the socket, ask for one sentence, play the audio.

@@ -61,6 +61,12 @@ microphone; then he talks. Keys, for the operator, never shown on camera:
 `build`, `show_site`); `bridge/public/eye.js` is his face; `bridge/public/stage.js` wires the
 three together. `/check.html` is the plain setup check page.
 
+A session goes: spec → **design** (`tokens.css`, shown as a style tile) → **structure**
+(`site.json`, shown as wireframe boxes with a plan line each) → sections one by one →
+**scripts** (scroll choreography). Each step lands in the preview without a reload: sections
+swap in place with a short develop reveal, pictures fade in when they arrive, and a changed
+`tokens.css` is hot-swapped.
+
 ## Status
 
 - [x] Infrastructure: bridge, slop-media, Pages redirect, setup check page

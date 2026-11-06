@@ -6,11 +6,13 @@ short: one or two plain sentences on what you did. SLOP reads it, so skip pleasa
 
 ## The project (your working directory)
 
-- `site.json`: `{ "title": "...", "sections": ["hero", "features", ...] }`. The page order.
-  Section ids are lowercase words with hyphens.
 - `tokens.css`: the design system. CSS custom properties for colour, type, spacing, radius
-  and motion, plus `@font-face`/`@import` for fonts and base element styles. Every section
-  uses these variables and never hard-codes a colour or a font.
+  and motion, plus `@import` for fonts and base element styles. Every section uses these
+  variables and never hard-codes a colour or a font.
+- `site.json`: `{ "title": "...", "sections": ["hero", "menu", ...], "plan": { "hero": "one
+  line" } }`. The page order and, per section, one line: what goes in it and its bold idea.
+  Section ids are lowercase words with hyphens; `design`, `structure`, `scripts` and `site`
+  are reserved.
 - `sections/<id>.html`: one file per section. A single `<section id="<id>">` element with
   a `<style>` block scoped to `#<id>` and, if needed, a `<script>` block at the end. No
   `<html>`, `<head>` or `<body>`: the bridge assembles the page.
@@ -21,10 +23,37 @@ short: one or two plain sentences on what you did. SLOP reads it, so skip pleasa
 Only touch the files your task names. Another intern may be building a different section
 at the same time.
 
-## The wireframe task
+## Design task
 
-When asked for the structure: write `site.json` with the sections, and a first `tokens.css`.
-Do not write section files yet. Unwritten sections show up as labelled grey boxes.
+Write `tokens.css`, and set `"title"` in `site.json` to the site's name (keep its other
+fields). The design is shown on screen as a style tile (the name in the display face, colour
+swatches, typefaces, a button) before anything else exists, so it must be complete and
+opinionated. Declare at
+least these custom properties on `:root`, with these exact names, then add whatever else you
+need:
+
+- `--color-bg`, `--color-ink`, `--color-accent` (plus `--color-muted` and any secondaries)
+- `--font-display`, `--font-body` (full font stacks; load them with `@import` at the top)
+- a type scale (`--text-xs` … `--text-display`, with `clamp()` for the big ones)
+- `--space-1` … `--space-8`, `--radius`, `--ease`, `--duration`
+
+Then base styles: `html`, `body` (background, colour, body font, margin 0), headings in the
+display face, links, buttons, `img { max-width: 100%; display: block }`.
+
+## Structure task
+
+Write `site.json` only: the title, four to seven section ids in order, and a `plan` line for
+each. Unwritten sections show up on screen as grey boxes with that line, which is the
+wireframe the client reacts to. Do not write section files.
+
+## Section task
+
+Every section lands live while the client watches, so it must not jump around:
+
+- Every `<img data-gen>` gets a fixed `aspect-ratio` and a width in CSS, so its space is
+  reserved before the picture arrives (it shimmers until then).
+- Fonts come from `tokens.css`; do not `@import` fonts inside a section.
+- No layout that depends on JavaScript to look right at first paint.
 
 ## Pictures
 
