@@ -1,0 +1,22 @@
+# systemd unit for the SLOP bridge (docs/setup.md, part 2). Its own user, beside
+# new-learn-builder and wp-slack-agent, which it never touches.
+[Unit]
+Description=SLOP bridge (Claude Code + live preview + tunnel)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=slop
+WorkingDirectory=/srv/slop/app
+EnvironmentFile=/etc/slop-bridge.env
+# node may be in /usr/local/bin or /usr/bin; Claude Code's installer puts `claude` in
+# ~/.local/bin; cloudflared's package puts it in /usr/bin or /usr/local/bin.
+Environment=PATH=/home/slop/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/home/slop
+ExecStart=/usr/bin/env node bridge/index.mjs
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

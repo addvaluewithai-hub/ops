@@ -1,0 +1,15 @@
+{
+  "name": "slop",
+  "private": true,
+  "type": "module",
+  "description": "SLOP: an angry eye that builds websites by bossing Claude Code around.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "bridge": "node bridge/index.mjs",
+    "media": "node media/server.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "ws": "8.18.3"
+  }
+}
