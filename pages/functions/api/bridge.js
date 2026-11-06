@@ -1,4 +1,4 @@
-// slop.pages.dev/api/bridge (docs/setup.md, part 3): where the bridge is right now.
+// ops-6yu.pages.dev/api/bridge (docs/setup.md, part 3): where the bridge is right now.
 // The bridge POSTs its new trycloudflare.com address on every start (Bearer SLOP_TOKEN);
 // the page reads it with GET. Needs the KV binding SLOP_KV and the secret SLOP_TOKEN.
 const TUNNEL = /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/;

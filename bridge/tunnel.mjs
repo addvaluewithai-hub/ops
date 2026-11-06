@@ -1,6 +1,6 @@
 // The way in from the internet without opening a port: cloudflared makes an outbound
 // connection and Cloudflare gives it a free https://<random>.trycloudflare.com address. That
-// address changes on every restart, so the bridge tells the Pages site (slop.pages.dev), which
+// address changes on every restart, so the bridge tells the Pages site (ops-6yu.pages.dev), which
 // always redirects to the current one.
 import { spawn } from 'node:child_process';
 
