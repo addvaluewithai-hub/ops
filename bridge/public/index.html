@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SLOP check</title>
+<style>
+  :root { color-scheme: dark; --red: #e22; --dim: #666; --line: #262626; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: #c8c8c8;
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  body { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; }
+  aside { padding: 20px 16px; border-right: 1px solid var(--line); overflow: auto; }
+  h1 { color: var(--red); font-size: 13px; letter-spacing: .5em; margin: 0 0 4px; }
+  h2 { font-size: 11px; color: var(--dim); letter-spacing: .2em; margin: 22px 0 8px; text-transform: uppercase; }
+  .row { display: flex; gap: 6px; margin-bottom: 6px; }
+  input, textarea, button { background: #0d0d0d; color: #ddd; border: 1px solid #333;
+    padding: 8px 10px; font: inherit; border-radius: 0; width: 100%; }
+  textarea { min-height: 64px; resize: vertical; }
+  button { width: auto; cursor: pointer; white-space: nowrap; }
+  button:hover, input:focus, textarea:focus { border-color: var(--red); outline: none; }
+  .ok { color: #5c5; } .bad { color: var(--red); }
+  #status div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 3px 0; }
+  #log { height: 260px; overflow: auto; border: 1px solid var(--line); padding: 8px; white-space: pre-wrap; font-size: 12px; }
+  #shot { max-width: 100%; display: block; margin-top: 6px; }
+  iframe { width: 100%; height: 100%; border: 0; background: #111; }
+  @media (max-width: 760px) { body { grid-template-columns: 1fr; grid-template-rows: auto 70vh; } }
+</style>
+</head>
+<body>
+<aside>
+  <h1>S.L.O.P.</h1>
+  <div style="color:var(--dim)">Setup check. The eye replaces this page next.</div>
+
+  <h2>Connections</h2>
+  <div id="status"></div>
+
+  <h2>1 · Gemini Live (voice)</h2>
+  <div class="row"><button id="live">Wake him up</button></div>
+
+  <h2>2 · Vertex picture (slop-media)</h2>
+  <div class="row"><input id="prompt" value="a single furious bloodshot eye floating in black void, macro photo, wet, red veins, hard rim light"></div>
+  <div class="row"><button id="image">Generate</button></div>
+  <img id="shot" alt="">
+
+  <h2>3 · Claude Code (the intern)</h2>
+  <textarea id="brief">Wireframe for a one-page site for a tiny late-night ramen bar called "Slurp" in Cairo. Sections: hero, menu, story, visit. Dark, loud, Japanese street poster energy.</textarea>
+  <div class="row"><button id="build">Build the wireframe</button><button id="hero">Then build the hero</button></div>
+
+  <h2>Events</h2>
+  <div id="log"></div>
+</aside>
+<iframe id="preview" src="/site/" title="The website being built"></iframe>
+<script type="module">
+  const $ = (id) => document.getElementById(id);
+  const log = (text, cls = '') => {
+    const line = document.createElement('div');
+    line.textContent = `${new Date().toLocaleTimeString()}  ${text}`;
+    if (cls) line.className = cls;
+    $('log').prepend(line);
+  };
+  const post = async (path, body) => {
+    const response = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || response.status);
+    return data;
+  };
+
+  async function status() {
+    const s = await fetch('/api/state').then((r) => r.json());
+    const rows = [
+      ['public address', s.tunnel || 'local only'],
+      ['project', `${s.project} (${s.site.sections.length} sections)`],
+      ['media service', s.media ? 'configured' : 'MEDIA_URL missing'],
+      ['gemini key', s.live ? 'configured' : 'GEMINI_API_KEY missing'],
+      ['building', Object.keys(s.building).join(', ') || 'nothing'],
+    ];
+    $('status').innerHTML = '';
+    for (const [k, v] of rows) {
+      const row = document.createElement('div');
+      row.innerHTML = '<span></span><span></span>';
+      row.children[0].textContent = k;
+      row.children[1].textContent = v;
+      row.children[1].className = /missing/.test(v) ? 'bad' : 'ok';
+      $('status').append(row);
+    }
+  }
+  status();
+
+  // Events from the bridge.
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'build') {
+      const text = m.state === 'step' ? `${m.key}: ${m.text}` : m.state === 'error' ? `${m.key} failed: ${m.error}` : `${m.key} ${m.state}${m.result ? ` — ${m.result}` : ''}`;
+      log(text, m.state === 'error' ? 'bad' : m.state === 'done' ? 'ok' : '');
+      if (m.state !== 'step') status();
+    } else if (m.type === 'media') {
+      log(`${m.kind} ${m.state}${m.ms ? ` in ${m.ms} ms` : ''}${m.error ? `: ${m.error}` : ''} — ${m.prompt ?? m.src ?? ''}`.slice(0, 220), m.state === 'error' ? 'bad' : '');
+    } else if (m.type === 'tunnel') status();
+  };
+  ws.onclose = () => log('event stream closed', 'bad');
+
+  $('image').onclick = async () => {
+    log('picture requested');
+    try {
+      const r = await post('/api/image', { prompt: $('prompt').value, aspect: '16:9' });
+      $('shot').src = `/site/${r.src}`;
+      log(`picture in ${r.ms} ms from ${r.model}`, 'ok');
+    } catch (error) { log(`picture failed: ${error.message}`, 'bad'); }
+  };
+  $('build').onclick = () => post('/api/build', { key: 'site', prompt: `Wireframe task. ${$('brief').value}` }).catch((e) => log(e.message, 'bad'));
+  $('hero').onclick = () => post('/api/build', { key: 'hero', prompt: `Build sections/hero.html for this brief, with one generated picture. Brief: ${$('brief').value}` }).catch((e) => log(e.message, 'bad'));
+
+  // Gemini Live: mint a token, open the socket, ask for one sentence, play the audio.
+  $('live').onclick = async () => {
+    try {
+      const t = await post('/api/live-token', {});
+      log(`live token for ${t.model}`, 'ok');
+      const audio = new AudioContext({ sampleRate: 24000 });
+      let at = audio.currentTime;
+      const socket = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(t.token)}`);
+      socket.onopen = () => socket.send(JSON.stringify({ setup: { model: `models/${t.model}`, ...t.setup } }));
+      socket.onmessage = async (e) => {
+        const m = JSON.parse(typeof e.data === 'string' ? e.data : await e.data.text());
+        if (m.setupComplete) socket.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: 'Wake up.' }] }], turnComplete: true } }));
+        if (m.error) log(`live error: ${m.error.message ?? JSON.stringify(m.error)}`, 'bad');
+        const said = m.serverContent?.outputTranscription?.text;
+        if (said) log(`SLOP: ${said}`);
+        for (const part of m.serverContent?.modelTurn?.parts ?? []) {
+          if (!part.inlineData?.mimeType?.startsWith('audio/pcm')) continue;
+          const raw = atob(part.inlineData.data);
+          const samples = new Int16Array(raw.length / 2);
+          for (let i = 0; i < samples.length; i++) samples[i] = (raw.charCodeAt(2 * i + 1) << 8) | raw.charCodeAt(2 * i);
+          const buffer = audio.createBuffer(1, samples.length, 24000);
+          buffer.getChannelData(0).set(Float32Array.from(samples, (s) => s / 32768));
+          const node = audio.createBufferSource();
+          node.buffer = buffer;
+          node.connect(audio.destination);
+          at = Math.max(at, audio.currentTime);
+          node.start(at);
+          at += buffer.duration;
+        }
+        if (m.serverContent?.turnComplete) { log('live works', 'ok'); setTimeout(() => socket.close(), 4000); }
+      };
+      socket.onclose = (e) => e.code !== 1000 && e.code !== 1005 && log(`live closed ${e.code} ${e.reason}`, 'bad');
+    } catch (error) { log(`live failed: ${error.message}`, 'bad'); }
+  };
+</script>
+</body>
+</html>
