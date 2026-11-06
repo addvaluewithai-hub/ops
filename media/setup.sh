@@ -43,7 +43,7 @@ echo "== Test picture (the first one also wakes the service up)"
 set +e
 CODE="$(curl -sS --max-time 120 -D /tmp/slop-headers -o slop-test.png -w '%{http_code}' \
   -X POST "$URL/image" -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' \
-  -d '{"prompt":"macro photo of a single furious bloodshot eye floating in pure black, wet, red veins, hard rim light","aspect":"1:1"}')"
+  -d '{"prompt":"a steaming bowl of ramen on a dark wooden counter, red neon sign glow, shallow depth of field","aspect":"1:1"}')"
 set -e
 if [ "$CODE" = "200" ]; then
   MODEL="$(grep -i '^x-model:' /tmp/slop-headers | cut -d' ' -f2 | tr -d '\r')"

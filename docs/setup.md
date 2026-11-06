@@ -30,10 +30,13 @@ It does everything:
 
 Running it again is safe: it keeps the token and redeploys.
 
-- **Picture `FAILED` with `no image model available`:** your project doesn't have the default
-  model IDs. Find the exact ID of Nano Banana 2 Lite (or another image model) in Vertex AI →
-  Model Garden, then run `IMAGE_MODELS=<model-id> bash ops/media/setup.sh`. A comma-separated
-  list works too; the IDs are tried in order.
+- **Image models**, tried in this order (IDs from Google Cloud's model pages):
+  `gemini-3.1-flash-lite-image` (Nano Banana 2 Lite, the fastest, 1K only),
+  `gemini-3.1-flash-image` (Nano Banana 2, up to 4K), then `gemini-2.5-flash-image`. The box
+  shows which one made the test picture. To choose others:
+  `IMAGE_MODELS=<id>,<id> bash ops/media/setup.sh`.
+- **Picture `FAILED` with `IMAGE_SAFETY`:** Google's filter refused that prompt. Pictures of
+  gore, real people or weapons are refused; the intern is told to avoid them.
 - **Video** uses Veo in `us-central1` (`veo-3.1-fast-generate-001` by default). To change it:
   `VIDEO_MODEL=<model-id> bash ops/media/setup.sh`.
 - **Recording days:** turn off the cold start (it costs a little while it is on):
