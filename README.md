@@ -12,7 +12,7 @@ A YouTube experiment, not a product.
 ```
 Browser ── Gemini Live (voice, tools)
    │
-   └── slop.pages.dev ──► https://<random>.trycloudflare.com ──► VPS: bridge/
+   └── ops-6yu.pages.dev ──► https://<random>.trycloudflare.com ──► VPS: bridge/
                           (Cloudflare quick tunnel, no open port)   ├─ claude -p, started instantly, streamed
                                                                     ├─ /site/: the website, live preview
                                                                     └─► Cloud Run: media/ (slop-media)
@@ -24,7 +24,7 @@ Browser ── Gemini Live (voice, tools)
 | --- | --- | --- |
 | `bridge/` | HTTP and WebSocket server. Runs Claude Code per section, serves and live-reloads the site, fills `<img data-gen>` pictures, mints Gemini Live tokens, keeps the tunnel up | The VPS, as user `slop` |
 | `media/` | Pictures and clips on Vertex AI. No key: the service account signs in | Cloud Run service `slop-media` |
-| `pages/` | `slop.pages.dev`: remembers where the bridge is and sends you there | Cloudflare Pages |
+| `pages/` | `ops-6yu.pages.dev`: remembers where the bridge is and sends you there | Cloudflare Pages |
 | `docs/setup.md` | **Setting it all up, step by step** | |
 
 ## The website being built

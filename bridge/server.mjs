@@ -157,7 +157,7 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
     if (key !== null) {
       if (!keyMatches(key, config.token)) {
         res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-        return res.end('Wrong key. On slop.pages.dev, open /?forget to type it again.');
+        return res.end(`Wrong key. Open ${config.pagesUrl || 'the Pages address'}/?forget to type it again.`);
       }
       res.writeHead(302, { 'set-cookie': loginCookie(req, config.token), location: path });
       return res.end();

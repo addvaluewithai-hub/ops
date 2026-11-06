@@ -3,7 +3,7 @@
 Three parts, in this order:
 
 1. **Google Cloud**: one command in Cloud Shell. It gives you `MEDIA_URL` and `SLOP_TOKEN`.
-2. **Cloudflare Pages**: `slop.pages.dev`, the fixed address that always finds the bridge.
+2. **Cloudflare Pages**: `ops-6yu.pages.dev`, the fixed address that always finds the bridge.
 3. **The VPS**: send `docs/vps-agent.md` to the server agent, with three values.
 
 **This repository is public.** No token, key or address goes in it, ever.
@@ -45,12 +45,12 @@ Running it again is safe: it downloads a fresh copy of the code, keeps the token
 
 ---
 
-## Part 2: Cloudflare Pages, `slop.pages.dev`
+## Part 2: Cloudflare Pages, `ops-6yu.pages.dev`
 
 Why it exists: a `pages.dev` address cannot point at a tunnel (tunnels need a domain you own).
 So the bridge uses Cloudflare's free quick tunnel, whose `trycloudflare.com` address changes on
 every start. Each time the bridge starts, it tells this small Pages site its new address.
-`slop.pages.dev` is the one address you remember: it asks for your token once and sends you on.
+`ops-6yu.pages.dev` is the one address you remember: it asks for your token once and sends you on.
 
 Merge the pull request first, because Pages deploys `main`.
 
@@ -60,7 +60,8 @@ Merge the pull request first, because Pages deploys `main`.
      VPS agent that address as `PAGES_URL`)
    - Production branch: `main`
    - Framework preset: **None**, build command: *(empty)*
-   - **Root directory: `pages`**, build output directory: `public`
+   - **Root directory: `pages`**, **build output directory: `public`** (left empty, the page
+     answers 404 at `/` and shows up at `/public/` instead)
 2. **Storage.** **Storage & Databases** → **KV** → **Create** a namespace named `slop`.
 3. **Bind it.** The Pages project → **Settings** → **Bindings** → **Add** → **KV namespace**:
    variable name **`SLOP_KV`**, namespace `slop`.
@@ -68,7 +69,7 @@ Merge the pull request first, because Pages deploys `main`.
    **`SLOP_TOKEN`**, value: the token from part 1.
 5. **Redeploy** so the binding and the secret take effect: **Deployments** → latest → **⋯** →
    **Retry deployment**.
-6. **Check:** `https://slop.pages.dev/api/bridge` shows `{"url":""}` until the bridge runs.
+6. **Check:** `https://ops-6yu.pages.dev/api/bridge` shows `{"url":""}` until the bridge runs.
 
 ---
 
@@ -76,7 +77,7 @@ Merge the pull request first, because Pages deploys `main`.
 
 Send the server agent the file **[`docs/vps-agent.md`](vps-agent.md)** and, privately:
 `SLOP_TOKEN` and `MEDIA_URL` from part 1, your `GEMINI_API_KEY` (from aistudio.google.com/apikey),
-and `PAGES_URL` if it is not `https://slop.pages.dev`.
+and `PAGES_URL` if it is not `https://ops-6yu.pages.dev`.
 
 The file has the rules (it never touches `new-learn-builder` or `wp-slack-agent`), the nine
 steps, what each one should print, and a report table to send back to you.
@@ -85,7 +86,7 @@ steps, what each one should print, and a report table to send back to you.
 
 ## Done: the setup check
 
-Open `https://slop.pages.dev`, type the token once, and press the three buttons:
+Open `https://ops-6yu.pages.dev`, type the token once, and press the three buttons:
 
 - **Wake him up**: one rude sentence out loud. Gemini Live works.
 - **Generate**: a picture and how long it took. Vertex works.

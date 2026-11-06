@@ -15,7 +15,7 @@ Code: https://github.com/addvaluewithai-hub/ops (public). The bridge is in `brid
 | `SLOP_TOKEN` | The shared secret, a 64-character hex string |
 | `MEDIA_URL` | `https://slop-media-....run.app`, the picture service on Google Cloud |
 | `GEMINI_API_KEY` | A Gemini API key from Google AI Studio |
-| `PAGES_URL` | Optional. `https://slop.pages.dev` unless the owner says otherwise |
+| `PAGES_URL` | Optional. `https://ops-6yu.pages.dev` unless the owner says otherwise |
 
 ## Rules
 
@@ -74,7 +74,7 @@ Code: https://github.com/addvaluewithai-hub/ops (public). The bridge is in `brid
    SLOP_TOKEN=<from the owner>
    MEDIA_URL=<from the owner>
    GEMINI_API_KEY=<from the owner>
-   PAGES_URL=https://slop.pages.dev
+   PAGES_URL=https://ops-6yu.pages.dev
    CLAUDE_MODEL=sonnet
    EOF
    sudo grep -o '^[A-Z_]*=' /etc/slop-bridge.env
@@ -108,14 +108,14 @@ Code: https://github.com/addvaluewithai-hub/ops (public). The bridge is in `brid
    bridge on http://127.0.0.1:8787, project /home/slop/projects/demo
    media on, live on
    bridge at https://<random-words>.trycloudflare.com
-   announced to https://slop.pages.dev
+   announced to https://ops-6yu.pages.dev
    ```
    Copy these lines into the Report (the `trycloudflare.com` address is fine to share with the
    owner). If the owner has not finished Cloudflare Pages yet, the last line reads
    `could not announce to Pages: ...`. That is expected: it works on the next restart once Pages
    is ready (`sudo systemctl restart slop-bridge`).
 
-9. **Tell the owner it is ready.** They open `https://slop.pages.dev`, or directly
+9. **Tell the owner it is ready.** They open `https://ops-6yu.pages.dev`, or directly
    `https://<random-words>.trycloudflare.com/?key=<SLOP_TOKEN>`, and press the three test buttons.
 
 ## Later: updating the bridge
