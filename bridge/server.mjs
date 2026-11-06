@@ -52,12 +52,15 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
     for (const client of wss?.clients ?? []) if (client.readyState === 1) client.send(text);
   };
 
-  const builtSections = async () =>
-    new Set(
-      (await readdir(join(dir, 'sections')).catch(() => []))
-        .filter((name) => name.endsWith('.html'))
-        .map((name) => name.slice(0, -5)),
-    );
+  const builtSections = async () => {
+    const names = (await readdir(join(dir, 'sections')).catch(() => [])).filter((n) => n.endsWith('.html'));
+    const built = new Set();
+    for (const name of names) {
+      const html = await readFile(join(dir, 'sections', name), 'utf8').catch(() => '');
+      if (html && !/<section\b[^>]*\bdata-wire\b/i.test(html)) built.add(name.slice(0, -5));
+    }
+    return built;
+  };
 
   async function fillAllImages() {
     const files = await readdir(join(dir, 'sections')).catch(() => []);

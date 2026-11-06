@@ -53,7 +53,8 @@ microphone; then he talks. Keys, for the operator, never shown on camera:
 | `O` | operator panel (voice state, mic, what is building, mood) |
 | `M` | mute the microphone |
 | `S` | show or hide the site |
-| `1`–`9` | force a mood (calm, thinking, bored, suspicious, contempt, angry, furious, surprised, pleased) |
+| `1`–`9` | force a mood (smug, deadpan, bored, suspicious, contempt, thinking, angry, furious, surprised) |
+| `E` / `G` | an eye-roll / a random gesture |
 | `R` | reconnect the voice |
 | `C` | captions on or off |
 
@@ -62,7 +63,7 @@ microphone; then he talks. Keys, for the operator, never shown on camera:
 three together. `/check.html` is the plain setup check page.
 
 A session goes: spec → **design** (`tokens.css`, shown as a style tile) → **structure**
-(`site.json`, shown as wireframe boxes with a plan line each) → sections one by one →
+(`site.json` plus a real low-fidelity wireframe per section, from grey primitives) → sections one by one →
 **scripts** (scroll choreography). Each step lands in the preview without a reload: sections
 swap in place with a short develop reveal, pictures fade in when they arrive, and a changed
 `tokens.css` is hot-swapped.
@@ -70,7 +71,7 @@ swap in place with a short develop reveal, pictures fade in when they arrive, an
 ## Status
 
 - [x] Infrastructure: bridge, slop-media, Pages redirect, setup check page
-- [x] The eye: WebGL eyeball with moods, saccades, blinks, audio-reactive pupil
+- [x] The eye: WebGL eyeball with moods and gestures, idle behaviour, voice-driven every frame
 - [x] SLOP's persona and tools on Gemini Live, non-blocking builds with live intern notes
 - [ ] Webcam head tracking; SLOP sees screenshots of what the intern built
 - [ ] Clips in sections (poster first, Veo after), choreography pass, ship to Pages

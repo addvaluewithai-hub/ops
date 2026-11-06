@@ -31,7 +31,7 @@
     filter: drop-shadow(0 0 60px rgba(224,38,31,.12)); }
   body.showing #eye { left: calc(100% - 11vmin); top: 11vmin; width: 18vmin; height: 18vmin; transform: translate(-50%, -50%); }
   body.furious #eye { filter: drop-shadow(0 0 90px rgba(224,38,31,.35)); }
-  #eye canvas { width: 100%; height: 100%; display: block; }
+  #eye canvas { width: 100%; height: 100%; display: block; transform-origin: 50% 50%; will-change: transform; }
 
   /* The breath: a faint pulse behind him. */
   #breath { position: fixed; left: 50%; top: 50%; width: 90vmin; height: 90vmin; transform: translate(-50%, -50%);
@@ -88,6 +88,7 @@
   <div><kbd>M</kbd><span>mute mic</span></div>
   <div><kbd>S</kbd><span>show / hide site</span></div>
   <div><kbd>1–9</kbd><span>force a mood</span></div>
+  <div><kbd>E</kbd> / <kbd>G</kbd><span>eye-roll / random gesture</span></div>
   <div><kbd>R</kbd><span>reconnect voice</span></div>
   <div><kbd>C</kbd><span>captions on / off</span></div>
 </div>

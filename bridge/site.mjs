@@ -101,6 +101,7 @@ ${accent ? `<div class="slop-tile-row"><span class="slop-btn" style="background:
 }
 
 const BASE_CSS = `
+html,body{margin:0;background:#0a0a0a;color:#ddd}
 .slop-wire{min-height:60vh;display:grid;place-content:center;gap:10px;margin:12px;border:1px dashed #555;text-align:center;
 background:repeating-linear-gradient(45deg,#1a1a1a 0 12px,#151515 12px 24px);color:#777;
 font:600 14px/1 ui-monospace,monospace;letter-spacing:.3em;padding:24px}
@@ -118,6 +119,20 @@ img[data-gen].slop-pending{background:linear-gradient(100deg,#141414 40%,#262626
 animation:slop-shimmer 1.4s linear infinite;min-height:120px}
 img[data-gen].slop-landing{opacity:0}
 @keyframes slop-shimmer{to{background-position:-150% 0}}
+/* Wireframe primitives for the structure step: a real low-fidelity layout in grey. */
+[data-wire]{background:#101010;color:#8c8c8c;font:13px/1.5 ui-monospace,monospace;position:relative;outline:1px dashed #333;outline-offset:-1px}
+[data-wire]::before{content:attr(id);position:absolute;top:10px;left:12px;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#666}
+.wf-h1,.wf-h2,.wf-h3{background:#3a3a3a;border-radius:3px;width:70%}.wf-h1{height:clamp(40px,8vw,120px)}.wf-h2{height:clamp(24px,3.5vw,56px)}.wf-h3{height:20px;width:40%}
+.wf-p{display:grid;gap:9px}.wf-p::before,.wf-p::after,.wf-p>i{content:"";display:block;height:10px;background:#2a2a2a;border-radius:2px}.wf-p>i{width:88%}.wf-p::after{width:62%}
+.wf-img{background:#1a1a1a;border:1px solid #333;aspect-ratio:16/9;width:100%;position:relative;overflow:hidden}
+.wf-img::before,.wf-img::after{content:"";position:absolute;left:-10%;right:-10%;top:50%;height:1px;background:#333}.wf-img::before{transform:rotate(27deg)}.wf-img::after{transform:rotate(-27deg)}
+.wf-img.portrait{aspect-ratio:4/5}.wf-img.square{aspect-ratio:1}.wf-img.wide{aspect-ratio:21/9}
+.wf-btn{display:inline-block;padding:12px 28px;border:1px solid #555;border-radius:3px;color:#aaa;letter-spacing:.05em}.wf-btn.solid{background:#3a3a3a;border-color:#3a3a3a}
+.wf-nav{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:18px 0}.wf-nav>i{display:block;height:12px;width:72px;background:#2f2f2f;border-radius:2px}
+.wf-icon{width:28px;height:28px;border:1px solid #555;border-radius:50%}
+.wf-card{border:1px solid #2f2f2f;padding:20px;display:grid;gap:12px;border-radius:4px}
+.wf-label{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#666}
+.wf-note{position:absolute;right:12px;top:10px;font-size:11px;color:#555;max-width:40ch;text-align:right}
 [data-slop-section]{transition:opacity .9s ease,filter .9s ease}
 [data-slop-section].slop-developing{opacity:0;filter:blur(14px) saturate(0)}
 `;
@@ -157,7 +172,7 @@ async function swap(id){
     a.forEach((img,i)=>{const src=b[i]&&b[i].getAttribute('src');if(src&&!src.startsWith('data:')&&img.getAttribute('src')!==src)land(img,src);});
     return;
   }
-  const wasWire=Boolean(here.querySelector('.slop-wire'));
+  const wasWire=Boolean(here.querySelector('.slop-wire,[data-wire]'));
   here.classList.add('slop-developing');
   await new Promise(r=>setTimeout(r,920));
   here.innerHTML=fresh.innerHTML;

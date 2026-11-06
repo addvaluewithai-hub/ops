@@ -14,7 +14,8 @@ export function bridgeConfig(env = process.env) {
     // A Gemini prebuilt voice. Fenrir is the gravelly one.
     voice: env.SLOP_VOICE || 'Fenrir',
     claudeBin: env.CLAUDE_BIN || 'claude',
-    claudeModel: env.CLAUDE_MODEL || 'sonnet',
+    claudeModel: env.CLAUDE_MODEL || 'opus',
+    claudeEffort: env.CLAUDE_EFFORT || 'high',
     claudeMaxTurns: Number(env.CLAUDE_MAX_TURNS) || 60,
     claudeTimeoutMs: Number(env.CLAUDE_TIMEOUT_MS) || 15 * 60 * 1000,
     projectsDir: env.PROJECTS_DIR || join(homedir(), 'projects'),

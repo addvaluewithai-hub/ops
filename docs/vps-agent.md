@@ -75,12 +75,14 @@ Code: https://github.com/addvaluewithai-hub/ops (public). The bridge is in `brid
    MEDIA_URL=<from the owner>
    GEMINI_API_KEY=<from the owner>
    PAGES_URL=https://ops-6yu.pages.dev
-   CLAUDE_MODEL=sonnet
+   CLAUDE_MODEL=opus
+   CLAUDE_EFFORT=high
    EOF
    sudo grep -o '^[A-Z_]*=' /etc/slop-bridge.env
    ```
    The last command lists the six names without their values: `CLAUDE_CODE_OAUTH_TOKEN=`,
-   `SLOP_TOKEN=`, `MEDIA_URL=`, `GEMINI_API_KEY=`, `PAGES_URL=`, `CLAUDE_MODEL=`. Write that list
+   `SLOP_TOKEN=`, `MEDIA_URL=`, `GEMINI_API_KEY=`, `PAGES_URL=`, `CLAUDE_MODEL=`,
+   `CLAUDE_EFFORT=`. Write that list
    in the Report. If `CLAUDE_CODE_OAUTH_TOKEN=` is missing (the builder signed in with
    `claude auth login` instead), sign `slop` in the same way:
    `sudo -u slop -H bash -c 'cd /tmp && ~/.local/bin/claude auth login'`. It prints a link: give

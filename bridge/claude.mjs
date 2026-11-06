@@ -27,6 +27,7 @@ export function claudeArgs({ prompt, sessionId, resume, config, brief }) {
     ...(resume ? ['--resume', sessionId] : ['--session-id', sessionId]),
     '--model',
     config.claudeModel,
+    ...(config.claudeEffort ? ['--effort', config.claudeEffort] : []),
     '--max-turns',
     String(config.claudeMaxTurns),
     '--append-system-prompt',
