@@ -1,10 +1,11 @@
 // The bridge's HTTP and WebSocket routes (docs/setup.md, part 2). index.mjs starts it.
 //   GET  /?key=...        log in (sets a cookie), then the app
-//   GET  /                the app (for now a setup check page; the eye comes next)
+//   GET  /                the stage: the eye, the voice, the site (public/index.html)
+//   GET  /check.html      the setup check page
 //   GET  /site/...        the website being built, assembled live
 //   GET  /api/state       project, sections, what is building, the public address
-//   POST /api/live-token  a single-use Gemini Live token
-//   POST /api/build       { key, prompt }: the intern starts now
+//   POST /api/live-token  a single-use Gemini Live token with SLOP's persona and tools
+//   POST /api/build       { key, brief }: the intern starts now (SLOP's build tool)
 //   POST /api/image       { prompt, aspect }: one picture into img/
 //   POST /api/video       { prompt, aspect, seconds, image }: one clip into video/
 //   WS   /ws              every event: build steps, files, pictures, clips
@@ -17,14 +18,13 @@ import { allowed, keyMatches, loginCookie } from './auth.mjs';
 import { build } from './claude.mjs';
 import { liveSetup, mintLiveToken } from './live.mjs';
 import { EXT, fillImages, mediaName } from './media.mjs';
-import { SECTION_ID, assemble, projectPath, readSite, serveFile } from './site.mjs';
+import { assemble, projectPath, readSite, serveFile } from './site.mjs';
+import { TOOLS, internPrompt, projectNote, refuseBuild } from './tools.mjs';
 
-const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), 'public');
-const BUILD_KEY = (key) => key === 'site' || key === 'scripts' || SECTION_ID.test(key);
-
-const DEFAULT_INSTRUCTION =
-  'You are SLOP, a furious, sarcastic floating eye who builds websites by bossing around an ' +
-  'intern. You are being tested. Say one short, rude sentence about being woken up, then wait.';
+const HERE = dirname(fileURLToPath(import.meta.url));
+const PUBLIC = join(HERE, 'public');
+const STATIC = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
+const persona = () => readFile(join(HERE, 'persona.md'), 'utf8');
 
 async function body(req) {
   const chunks = [];
@@ -51,6 +51,13 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
     const text = JSON.stringify(event);
     for (const client of wss?.clients ?? []) if (client.readyState === 1) client.send(text);
   };
+
+  const builtSections = async () =>
+    new Set(
+      (await readdir(join(dir, 'sections')).catch(() => []))
+        .filter((name) => name.endsWith('.html'))
+        .map((name) => name.slice(0, -5)),
+    );
 
   async function fillAllImages() {
     const files = await readdir(join(dir, 'sections')).catch(() => []);
@@ -114,19 +121,21 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
     if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
     const input = await body(req);
     if (path === '/api/live-token') {
+      const note = projectNote(await readSite(dir), await builtSections());
       const setup = liveSetup({
-        instruction: String(input.instruction || DEFAULT_INSTRUCTION),
-        voice: input.voice,
-        tools: Array.isArray(input.tools) ? input.tools : [],
+        instruction: `${await persona()}\n\n## Right now\n\n${note}`,
+        voice: input.voice || config.voice,
+        tools: TOOLS,
       });
       return json(res, 200, await mintLiveToken({ key: config.geminiKey, model: config.liveModel, setup }, fetcher));
     }
     if (path === '/api/build') {
       const key = String(input.key ?? '');
-      if (!BUILD_KEY(key)) return json(res, 400, { error: 'key: site, scripts or a section id' });
-      if (!input.prompt) return json(res, 400, { error: 'prompt is required' });
+      const brief = String(input.brief ?? input.prompt ?? '');
+      const refused = refuseBuild({ key, brief });
+      if (refused) return json(res, 400, { error: refused });
       if (building.has(key)) return json(res, 409, { error: `${key} is already building`, id: building.get(key) });
-      return json(res, 202, { id: startBuild(key, String(input.prompt)) });
+      return json(res, 202, { id: startBuild(key, internPrompt({ key, brief })) });
     }
     if (path === '/api/image') {
       if (!input.prompt) return json(res, 400, { error: 'prompt is required' });
@@ -167,9 +176,12 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
       return res.end('SLOP does not know you. Open this address with ?key=<your SLOP_TOKEN>.');
     }
     if (path.startsWith('/api/')) return api(req, res, path);
-    if (path === '/' || path === '/index.html') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-      return res.end(await readFile(join(PUBLIC, 'index.html')));
+    const asset = path === '/' ? 'index.html' : /^\/[a-z-]+\.(html|js|css)$/.test(path) ? path.slice(1) : '';
+    if (asset) {
+      const file = await readFile(join(PUBLIC, asset)).catch(() => null);
+      if (!file) return json(res, 404, { error: 'not found' });
+      res.writeHead(200, { 'content-type': STATIC[asset.slice(asset.lastIndexOf('.'))], 'cache-control': 'no-store' });
+      return res.end(file);
     }
     if (path === '/site') {
       res.writeHead(302, { location: '/site/' });

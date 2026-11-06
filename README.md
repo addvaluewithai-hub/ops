@@ -43,9 +43,28 @@ npm test
 SLOP_TOKEN=dev TUNNEL=off PROJECTS_DIR=/tmp/slop npm run bridge   # then open http://127.0.0.1:8787/?key=dev
 ```
 
+## The stage
+
+Open the bridge (through the Pages address) and press **WAKE HIM**. The browser asks for the
+microphone; then he talks. Keys, for the operator, never shown on camera:
+
+| Key | Does |
+| --- | --- |
+| `O` | operator panel (voice state, mic, what is building, mood) |
+| `M` | mute the microphone |
+| `S` | show or hide the site |
+| `1`–`9` | force a mood (calm, thinking, bored, suspicious, contempt, angry, furious, surprised, pleased) |
+| `R` | reconnect the voice |
+| `C` | captions on or off |
+
+`bridge/persona.md` is who he is; `bridge/tools.mjs` is what he can do (`set_mood`, `look_at`,
+`build`, `show_site`); `bridge/public/eye.js` is his face; `bridge/public/stage.js` wires the
+three together. `/check.html` is the plain setup check page.
+
 ## Status
 
 - [x] Infrastructure: bridge, slop-media, Pages redirect, setup check page
-- [ ] The eye: WebGL eyeball, moods, webcam tracking
-- [ ] SLOP's persona and tools on Gemini Live (build, edit, images, mood), non-blocking with live progress notes
+- [x] The eye: WebGL eyeball with moods, saccades, blinks, audio-reactive pupil
+- [x] SLOP's persona and tools on Gemini Live, non-blocking builds with live intern notes
+- [ ] Webcam head tracking; SLOP sees screenshots of what the intern built
 - [ ] Clips in sections (poster first, Veo after), choreography pass, ship to Pages

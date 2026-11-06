@@ -3,149 +3,93 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SLOP check</title>
+<title>SLOP</title>
 <style>
-  :root { color-scheme: dark; --red: #e22; --dim: #666; --line: #262626; }
+  :root { color-scheme: dark; --red: #e0261f; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: #000; color: #c8c8c8;
-    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-  body { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; }
-  aside { padding: 20px 16px; border-right: 1px solid var(--line); overflow: auto; }
-  h1 { color: var(--red); font-size: 13px; letter-spacing: .5em; margin: 0 0 4px; }
-  h2 { font-size: 11px; color: var(--dim); letter-spacing: .2em; margin: 22px 0 8px; text-transform: uppercase; }
-  .row { display: flex; gap: 6px; margin-bottom: 6px; }
-  input, textarea, button { background: #0d0d0d; color: #ddd; border: 1px solid #333;
-    padding: 8px 10px; font: inherit; border-radius: 0; width: 100%; }
-  textarea { min-height: 64px; resize: vertical; }
-  button { width: auto; cursor: pointer; white-space: nowrap; }
-  button:hover, input:focus, textarea:focus { border-color: var(--red); outline: none; }
-  .ok { color: #5c5; } .bad { color: var(--red); }
-  #status div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 3px 0; }
-  #log { height: 260px; overflow: auto; border: 1px solid var(--line); padding: 8px; white-space: pre-wrap; font-size: 12px; }
-  #shot { max-width: 100%; display: block; margin-top: 6px; }
-  iframe { width: 100%; height: 100%; border: 0; background: #111; }
-  @media (max-width: 760px) { body { grid-template-columns: 1fr; grid-template-rows: auto 70vh; } }
+  html, body { margin: 0; height: 100%; background: #000; color: #cfcfcf; font: 13px/1.5 var(--mono); overflow: hidden; }
+  body { cursor: none; }
+  body.operator { cursor: auto; }
+
+  /* The site, behind everything, slid in from the right when building starts. */
+  #site { position: fixed; inset: 0; left: 0; border: 0; width: 100%; height: 100%; background: #000;
+    opacity: 0; transform: translateX(6%) scale(.98); filter: blur(18px) saturate(.4);
+    transition: opacity 1.4s cubic-bezier(.2,.8,.2,1), transform 1.4s cubic-bezier(.2,.8,.2,1), filter 1.4s ease; pointer-events: none; }
+  body.showing #site { opacity: 1; transform: none; filter: none; pointer-events: auto; }
+  /* A dark veil over the site so the eye stays readable; thins when SLOP looks at the site. */
+  #veil { position: fixed; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(60% 60% at 80% 22%, rgba(0,0,0,.92), rgba(0,0,0,.35) 70%, rgba(0,0,0,.2));
+    transition: opacity 1.2s ease; }
+  body.showing #veil { opacity: 1; }
+  body.showing.at-site #veil { opacity: .5; }
+
+  /* The eye: centred and big while talking, tucked to the top right while the site shows. */
+  #eye { position: fixed; left: 50%; top: 50%; width: min(70vmin, 720px); height: min(70vmin, 720px);
+    transform: translate(-50%, -50%); transition: all 1.4s cubic-bezier(.2,.8,.2,1);
+    filter: drop-shadow(0 0 60px rgba(224,38,31,.12)); }
+  body.showing #eye { left: calc(100% - 11vmin); top: 11vmin; width: 18vmin; height: 18vmin; transform: translate(-50%, -50%); }
+  body.furious #eye { filter: drop-shadow(0 0 90px rgba(224,38,31,.35)); }
+  #eye canvas { width: 100%; height: 100%; display: block; }
+
+  /* The breath: a faint pulse behind him. */
+  #breath { position: fixed; left: 50%; top: 50%; width: 90vmin; height: 90vmin; transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(224,38,31,.10), transparent 60%); pointer-events: none;
+    animation: breath 5s ease-in-out infinite; transition: opacity 1.4s; }
+  body.showing #breath { opacity: 0; }
+  @keyframes breath { 50% { transform: translate(-50%, -50%) scale(1.12); opacity: .6; } }
+
+  /* Captions: his words, then what he heard, at the bottom. */
+  #captions { position: fixed; left: 0; right: 0; bottom: 6vh; text-align: center; pointer-events: none; padding: 0 10vw; }
+  #said { font-size: clamp(16px, 2.2vmin, 26px); color: #eee; letter-spacing: .01em; text-shadow: 0 2px 20px #000;
+    min-height: 1.5em; transition: opacity .3s; }
+  #said:empty { opacity: 0; }
+  #heard { font-size: clamp(11px, 1.4vmin, 15px); color: #666; margin-top: 10px; min-height: 1.5em; }
+
+  /* The intern's progress, small, under the eye while building. */
+  #intern { position: fixed; right: 2vmin; top: 22vmin; width: 18vmin; text-align: center; color: #555; font-size: 11px;
+    letter-spacing: .12em; text-transform: uppercase; opacity: 0; transition: opacity .6s; pointer-events: none; }
+  body.showing.building #intern { opacity: 1; }
+  #intern b { display: block; color: var(--red); font-weight: 600; }
+  #intern i { display: block; font-style: normal; color: #777; text-transform: none; letter-spacing: 0; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Operator panel (press O). Never on camera. */
+  #ops { position: fixed; left: 16px; top: 16px; background: rgba(10,10,10,.92); border: 1px solid #222; padding: 12px 14px;
+    display: none; min-width: 260px; }
+  body.operator #ops { display: block; }
+  #ops h1 { margin: 0 0 8px; font-size: 11px; letter-spacing: .4em; color: var(--red); }
+  #ops div { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; border-bottom: 1px solid #1a1a1a; }
+  #ops kbd { color: #999; }
+  #ops .ok { color: #5c5; } #ops .bad { color: var(--red); }
+
+  /* Gate: one button so the browser lets us use audio. */
+  #gate { position: fixed; inset: 0; display: grid; place-items: center; background: #000; z-index: 10; cursor: pointer;
+    transition: opacity .8s; }
+  #gate.gone { opacity: 0; pointer-events: none; }
+  #gate span { letter-spacing: .5em; color: #444; font-size: 12px; animation: breath 3s ease-in-out infinite; }
+  #gate.bad span { color: var(--red); animation: none; letter-spacing: .05em; }
 </style>
 </head>
 <body>
-<aside>
-  <h1>S.L.O.P.</h1>
-  <div style="color:var(--dim)">Setup check. The eye replaces this page next.</div>
-
-  <h2>Connections</h2>
-  <div id="status"></div>
-
-  <h2>1 · Gemini Live (voice)</h2>
-  <div class="row"><button id="live">Wake him up</button></div>
-
-  <h2>2 · Vertex picture (slop-media)</h2>
-  <div class="row"><input id="prompt" value="a giant neon sign shaped like an eye above a rainy Tokyo alley at night, cinematic, film grain"></div>
-  <div class="row"><button id="image">Generate</button></div>
-  <img id="shot" alt="">
-
-  <h2>3 · Claude Code (the intern)</h2>
-  <textarea id="brief">Wireframe for a one-page site for a tiny late-night ramen bar called "Slurp" in Cairo. Sections: hero, menu, story, visit. Dark, loud, Japanese street poster energy.</textarea>
-  <div class="row"><button id="build">Build the wireframe</button><button id="hero">Then build the hero</button></div>
-
-  <h2>Events</h2>
-  <div id="log"></div>
-</aside>
-<iframe id="preview" src="/site/" title="The website being built"></iframe>
-<script type="module">
-  const $ = (id) => document.getElementById(id);
-  const log = (text, cls = '') => {
-    const line = document.createElement('div');
-    line.textContent = `${new Date().toLocaleTimeString()}  ${text}`;
-    if (cls) line.className = cls;
-    $('log').prepend(line);
-  };
-  const post = async (path, body) => {
-    const response = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || response.status);
-    return data;
-  };
-
-  async function status() {
-    const s = await fetch('/api/state').then((r) => r.json());
-    const rows = [
-      ['public address', s.tunnel || 'local only'],
-      ['project', `${s.project} (${s.site.sections.length} sections)`],
-      ['media service', s.media ? 'configured' : 'MEDIA_URL missing'],
-      ['gemini key', s.live ? 'configured' : 'GEMINI_API_KEY missing'],
-      ['building', Object.keys(s.building).join(', ') || 'nothing'],
-    ];
-    $('status').innerHTML = '';
-    for (const [k, v] of rows) {
-      const row = document.createElement('div');
-      row.innerHTML = '<span></span><span></span>';
-      row.children[0].textContent = k;
-      row.children[1].textContent = v;
-      row.children[1].className = /missing/.test(v) ? 'bad' : 'ok';
-      $('status').append(row);
-    }
-  }
-  status();
-
-  // Events from the bridge.
-  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
-  ws.onmessage = (e) => {
-    const m = JSON.parse(e.data);
-    if (m.type === 'build') {
-      const text = m.state === 'step' ? `${m.key}: ${m.text}` : m.state === 'error' ? `${m.key} failed: ${m.error}` : `${m.key} ${m.state}${m.result ? ` — ${m.result}` : ''}`;
-      log(text, m.state === 'error' ? 'bad' : m.state === 'done' ? 'ok' : '');
-      if (m.state !== 'step') status();
-    } else if (m.type === 'media') {
-      log(`${m.kind} ${m.state}${m.ms ? ` in ${m.ms} ms` : ''}${m.error ? `: ${m.error}` : ''} — ${m.prompt ?? m.src ?? ''}`.slice(0, 220), m.state === 'error' ? 'bad' : '');
-    } else if (m.type === 'tunnel') status();
-  };
-  ws.onclose = () => log('event stream closed', 'bad');
-
-  $('image').onclick = async () => {
-    log('picture requested');
-    try {
-      const r = await post('/api/image', { prompt: $('prompt').value, aspect: '16:9' });
-      $('shot').src = `/site/${r.src}`;
-      log(`picture in ${r.ms} ms from ${r.model}`, 'ok');
-    } catch (error) { log(`picture failed: ${error.message}`, 'bad'); }
-  };
-  $('build').onclick = () => post('/api/build', { key: 'site', prompt: `Wireframe task. ${$('brief').value}` }).catch((e) => log(e.message, 'bad'));
-  $('hero').onclick = () => post('/api/build', { key: 'hero', prompt: `Build sections/hero.html for this brief, with one generated picture. Brief: ${$('brief').value}` }).catch((e) => log(e.message, 'bad'));
-
-  // Gemini Live: mint a token, open the socket, ask for one sentence, play the audio.
-  $('live').onclick = async () => {
-    try {
-      const t = await post('/api/live-token', {});
-      log(`live token for ${t.model}`, 'ok');
-      const audio = new AudioContext({ sampleRate: 24000 });
-      let at = audio.currentTime;
-      const socket = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(t.token)}`);
-      socket.onopen = () => socket.send(JSON.stringify({ setup: { model: `models/${t.model}`, ...t.setup } }));
-      socket.onmessage = async (e) => {
-        const m = JSON.parse(typeof e.data === 'string' ? e.data : await e.data.text());
-        if (m.setupComplete) socket.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: 'Wake up.' }] }], turnComplete: true } }));
-        if (m.error) log(`live error: ${m.error.message ?? JSON.stringify(m.error)}`, 'bad');
-        const said = m.serverContent?.outputTranscription?.text;
-        if (said) log(`SLOP: ${said}`);
-        for (const part of m.serverContent?.modelTurn?.parts ?? []) {
-          if (!part.inlineData?.mimeType?.startsWith('audio/pcm')) continue;
-          const raw = atob(part.inlineData.data);
-          const samples = new Int16Array(raw.length / 2);
-          for (let i = 0; i < samples.length; i++) samples[i] = (raw.charCodeAt(2 * i + 1) << 8) | raw.charCodeAt(2 * i);
-          const buffer = audio.createBuffer(1, samples.length, 24000);
-          buffer.getChannelData(0).set(Float32Array.from(samples, (s) => s / 32768));
-          const node = audio.createBufferSource();
-          node.buffer = buffer;
-          node.connect(audio.destination);
-          at = Math.max(at, audio.currentTime);
-          node.start(at);
-          at += buffer.duration;
-        }
-        if (m.serverContent?.turnComplete) { log('live works', 'ok'); setTimeout(() => socket.close(), 4000); }
-      };
-      socket.onclose = (e) => e.code !== 1000 && e.code !== 1005 && log(`live closed ${e.code} ${e.reason}`, 'bad');
-    } catch (error) { log(`live failed: ${error.message}`, 'bad'); }
-  };
-</script>
+<iframe id="site" src="/site/" title="The website being built"></iframe>
+<div id="veil"></div>
+<div id="breath"></div>
+<div id="eye"><canvas></canvas></div>
+<div id="intern"><b>intern</b><i></i></div>
+<div id="captions"><div id="said"></div><div id="heard"></div></div>
+<div id="ops"><h1>OPERATOR</h1>
+  <div><span>voice</span><span id="o-live">off</span></div>
+  <div><span>mic</span><span id="o-mic">on</span></div>
+  <div><span>building</span><span id="o-building">–</span></div>
+  <div><span>mood</span><span id="o-mood">–</span></div>
+  <div><kbd>O</kbd><span>this panel</span></div>
+  <div><kbd>M</kbd><span>mute mic</span></div>
+  <div><kbd>S</kbd><span>show / hide site</span></div>
+  <div><kbd>1–9</kbd><span>force a mood</span></div>
+  <div><kbd>R</kbd><span>reconnect voice</span></div>
+  <div><kbd>C</kbd><span>captions on / off</span></div>
+</div>
+<div id="gate"><span>WAKE HIM</span></div>
+<script type="module" src="/stage.js"></script>
 </body>
 </html>
