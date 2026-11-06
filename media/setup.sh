@@ -27,6 +27,18 @@ bash "$(dirname "$0")/deploy.sh"
 URL="$(gcloud run services describe "$SERVICE" --project="$PROJECT_ID" --region="$REGION" --format='value(status.url)')"
 TOKEN="$(gcloud secrets versions access latest --secret=SLOP_TOKEN --project="$PROJECT_ID")"
 
+echo "== Reaching the service"
+HEALTH="$(curl -sS --max-time 60 "$URL/health" || true)"
+if [ "$HEALTH" != '{"ok":true}' ]; then
+  echo "Cloud Run itself refuses calls (it answered: $(echo "$HEALTH" | grep -o '<title>[^<]*' | sed 's/<title>//'))."
+  echo "The organisation policy probably does not allow a public service. Send this output to Claude:"
+  gcloud run services describe "$SERVICE" --project="$PROJECT_ID" --region="$REGION" \
+    --format='value(metadata.annotations)' | tr ';' '\n' | grep -i invoker || true
+  gcloud resource-manager org-policies list --project="$PROJECT_ID" --format='value(constraint)' 2>/dev/null | grep -iE 'run|iam' || true
+  exit 1
+fi
+echo "   ok"
+
 echo "== Test picture (the first one also wakes the service up)"
 set +e
 CODE="$(curl -sS --max-time 120 -D /tmp/slop-headers -o slop-test.png -w '%{http_code}' \
