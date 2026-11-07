@@ -162,7 +162,7 @@ const timers=new Map();
 const norm=(el)=>el.innerHTML.replace(/\\s+class="[^"]*slop-(pending|landing)[^"]*"/g,'').replace(/\\bsrc="[^"]*"/g,'src=""');
 function land(img,src){img.classList.add('slop-landing');const probe=new Image();probe.onload=()=>{img.src=src;img.classList.remove('slop-pending');requestAnimationFrame(()=>img.classList.remove('slop-landing'));};probe.src=src;}
 async function swap(id){
-  const html=await (await fetch('/site/',{cache:'no-store'})).text();
+  const html=await (await fetch('./',{cache:'no-store'})).text();
   const doc=new DOMParser().parseFromString(html,'text/html');
   const fresh=doc.querySelector('[data-slop-section="'+id+'"]');
   const here=document.querySelector('[data-slop-section="'+id+'"]');
@@ -186,7 +186,7 @@ function restyle(){
   const old=document.querySelector('link[data-slop-tokens]');const l=document.createElement('link');l.rel='stylesheet';l.dataset.slopTokens='1';
   l.href='tokens.css?v='+Date.now();l.onload=()=>{old&&old.remove();if(document.querySelector('[data-slop-section="design"]'))swap('design');};document.head.append(l);
 }
-const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');
+const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+location.pathname.replace(/site\\/.*$/,'ws'));
 ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.type!=='file')return;
   const sec=/^sections\\/([a-z0-9-]+)\\.html$/.exec(m.path);
   const later=(key,fn,ms)=>{clearTimeout(timers.get(key));timers.set(key,setTimeout(fn,ms));};

@@ -75,19 +75,19 @@ function showSite(visible) {
   body.classList.toggle('showing', visible);
   if (!visible) lookAt('user');
   try {
-    localStorage.setItem('slop-showing', visible ? '1' : '');
+    localStorage.setItem(`slop-showing:${location.pathname}`, visible ? '1' : '');
   } catch {
     // private window
   }
 }
 
 // After a refresh, the site comes back if it was showing or if anything has been built.
-fetch('/api/state')
+fetch('api/state')
   .then((r) => r.json())
   .then((s) => {
     let remembered = '';
     try {
-      remembered = localStorage.getItem('slop-showing') ?? '';
+      remembered = localStorage.getItem(`slop-showing:${location.pathname}`) ?? '';
     } catch {
       // private window
     }
@@ -95,6 +95,7 @@ fetch('/api/state')
     for (const key of Object.keys(s.building)) building.add(key);
     updateBuilding();
     showSpec(s.spec ?? {}, s.missing ?? []);
+    document.title = `SLOP · ${s.site.title !== 'Untitled' ? s.site.title : s.project}`;
   })
   .catch(() => {});
 
@@ -118,7 +119,7 @@ const live = createLive({
         : { error: `unknown mood; use one of ${Object.keys(MOODS).join(', ')}` };
     if (name === 'look_at') return { ok: lookAt(String(args.target ?? 'user')), scheduling: 'SILENT' };
     if (name === 'note_spec') {
-      const r = await fetch('/api/spec', {
+      const r = await fetch('api/spec', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ field: args.field, answer: args.answer }),
@@ -133,7 +134,7 @@ const live = createLive({
       return { ok: true, scheduling: 'SILENT' };
     }
     if (name === 'build') {
-      const r = await fetch('/api/build', {
+      const r = await fetch('api/build', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ key: args.key, brief: args.brief }),
@@ -179,7 +180,7 @@ function updateBuilding() {
 }
 
 function connectBridge() {
-  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${location.pathname.replace(/[^/]*$/, '')}ws`);
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.type === 'build') {

@@ -107,7 +107,7 @@ Code: https://github.com/addvaluewithai-hub/ops (public). The bridge is in `brid
    ```
    It should print `active`, then log lines like:
    ```
-   bridge on http://127.0.0.1:8787, project /home/slop/projects/demo
+   bridge on http://127.0.0.1:8787, sites in /home/slop/projects
    media on, live on
    bridge at https://<random-words>.trycloudflare.com
    announced to https://ops-6yu.pages.dev

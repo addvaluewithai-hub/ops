@@ -1,10 +1,9 @@
-// Starts the SLOP bridge on the VPS (docs/setup.md, part 2): the server, the file watcher
-// that drives the live preview, and the tunnel that makes it reachable.
-import { join } from 'node:path';
+// Starts the SLOP bridge on the VPS (docs/setup.md, part 2): the server over every site in
+// PROJECTS_DIR, and the tunnel that makes it reachable.
+import { mkdir } from 'node:fs/promises';
 import { bridgeConfig } from './config.mjs';
 import { mediaClient } from './media.mjs';
 import { createBridge } from './server.mjs';
-import { ensureProject, watchProject } from './site.mjs';
 import { announce, startTunnel } from './tunnel.mjs';
 
 const config = bridgeConfig();
@@ -12,14 +11,12 @@ if (!config.token) {
   console.error('SLOP_TOKEN is not set (see docs/setup.md); refusing to start.');
   process.exit(1);
 }
-const dir = join(config.projectsDir, config.project);
-await ensureProject(dir);
+await mkdir(config.projectsDir, { recursive: true });
 
-const { server, broadcast, state } = createBridge({ config, dir, media: mediaClient(config) });
-watchProject(dir, (path) => broadcast({ type: 'file', path }));
+const { server, broadcast, state } = createBridge({ config, projectsDir: config.projectsDir, media: mediaClient(config) });
 
 server.listen(config.port, config.host, () => {
-  console.log(`bridge on http://${config.host}:${config.port}, project ${dir}`);
+  console.log(`bridge on http://${config.host}:${config.port}, sites in ${config.projectsDir}`);
   console.log(`media ${config.mediaUrl ? 'on' : 'OFF (MEDIA_URL)'}, live ${config.geminiKey ? 'on' : 'OFF (GEMINI_API_KEY)'}`);
 });
 

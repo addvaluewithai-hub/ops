@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
@@ -83,24 +83,24 @@ test('live tools default to non-blocking so SLOP keeps talking', () => {
 });
 
 test('a build streams to the browser and its pictures are filled in', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'slop-'));
+  const dir = join(await mkdtemp(join(tmpdir(), 'slop-')), 'demo');
   await ensureProject(dir);
   const config = { ...bridgeConfig({ SLOP_TOKEN: 'secret', MEDIA_URL: 'http://media' }), port: 0 };
   const media = {
     image: async () => ({ bytes: Buffer.from('png'), mimeType: 'image/png', model: 'm', ms: 5 }),
   };
   const spawner = (_bin, args, options) => spawn(process.execPath, [FAKE, ...args], options);
-  const { server } = createBridge({ config, dir, media, spawner });
+  const { server, close } = createBridge({ config, projectsDir: dirname(dir), media, spawner });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
-    assert.equal((await fetch(`${base}/api/state`)).status, 401);
+    assert.equal((await fetch(`${base}/p/demo/api/state`)).status, 401);
     const login = await fetch(`${base}/?key=secret`, { redirect: 'manual' });
     assert.equal(login.status, 302);
     const cookie = login.headers.get('set-cookie').split(';')[0];
     assert.doesNotMatch(cookie, /secret/);
 
-    const ws = new WebSocket(`${base.replace('http', 'ws')}/ws`, { headers: { cookie } });
+    const ws = new WebSocket(`${base.replace('http', 'ws')}/p/${basename(dir)}/ws`, { headers: { cookie } });
     const events = [];
     await new Promise((resolve) => ws.once('open', resolve));
     const finished = new Promise((resolve) =>
@@ -111,19 +111,19 @@ test('a build streams to the browser and its pictures are filled in', async () =
       }),
     );
     const post = (path, body) =>
-      fetch(`${base}${path}`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      fetch(`${base}/p/${basename(dir)}/${path}`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify(body) });
     // The design step is refused while spec fields are missing, and the refusal names them.
-    let refused = await post('/api/build', { key: 'design', brief: 'Loud Japanese street poster energy, red and black.' });
+    let refused = await post('api/build', { key: 'design', brief: 'Loud Japanese street poster energy, red and black.' });
     assert.equal(refused.status, 400);
     assert.match((await refused.json()).error, /name: What is it called\?.*audience/);
     for (const [field, answer] of [['name', 'Slurp'], ['what', 'a late-night ramen bar in Cairo'], ['audience', 'night owls'], ['feeling', 'loud street poster']])
-      assert.equal((await post('/api/spec', { field, answer })).status, 200);
-    const spec = await (await post('/api/spec', { field: 'brand', answer: 'none' })).json();
+      assert.equal((await post('api/spec', { field, answer })).status, 200);
+    const spec = await (await post('api/spec', { field: 'brand', answer: 'none' })).json();
     assert.deepEqual(spec.missing, ['goal', 'content']);
     // A section needs nothing beyond the structure, but a brief that says nothing is refused.
-    refused = await post('/api/build', { key: 'hero', brief: 'go' });
+    refused = await post('api/build', { key: 'hero', brief: 'go' });
     assert.match((await refused.json()).error, /brief is 1 words/);
-    const started2 = await post('/api/build', {
+    const started2 = await post('api/build', {
       key: 'hero',
       brief: 'Giant red title, one generated picture of a bowl, the opening hours and a see-the-menu button.',
     });
@@ -139,9 +139,14 @@ test('a build streams to the browser and its pictures are filled in', async () =
     assert.match(hero, /src="img\/[0-9a-f]{16}\.png"/);
     const sessions = JSON.parse(await readFile(join(dir, '.slop', 'sessions.json'), 'utf8'));
     assert.match(sessions.hero, /^[0-9a-f-]{36}$/);
-    const served = await fetch(`${base}/site/${/src="([^"]+)"/.exec(hero)[1]}`, { headers: { cookie } });
+    const served = await fetch(`${base}/p/${basename(dir)}/site/${/src="([^"]+)"/.exec(hero)[1]}`, { headers: { cookie } });
+    const list = await fetch(`${base}/api/projects`, { headers: { cookie } }).then((r) => r.json());
+    assert.equal(list.projects[0].name, basename(dir));
+    assert.equal(list.projects[0].specDone, false);
+    const made = await fetch(`${base}/api/projects`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: '{"name":"Second Site"}' });
+    assert.equal(made.status, 400);
     assert.equal(await served.text(), 'png');
   } finally {
-    server.close();
+    close();
   }
 });

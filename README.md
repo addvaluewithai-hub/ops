@@ -45,7 +45,10 @@ SLOP_TOKEN=dev TUNNEL=off PROJECTS_DIR=/tmp/slop npm run bridge   # then open ht
 
 ## The stage
 
-Open the bridge (through the Pages address) and press **WAKE HIM**. The browser asks for the
+Open the bridge (through the Pages address). The entry screen lists every site, one folder
+each under `PROJECTS_DIR`, with how far it got; pick one to continue or type a name to start
+one. Each site lives at `/p/<name>/`, so a refresh or a bookmark lands back in it. Press
+**WAKE HIM**. The browser asks for the
 microphone; then he talks. Keys, for the operator, never shown on camera:
 
 | Key | Does |

@@ -31,7 +31,7 @@
 <body>
 <aside>
   <h1>S.L.O.P.</h1>
-  <div style="color:var(--dim)">Setup check. The stage is at <a href="/" style="color:#e22">/</a>.</div>
+  <div style="color:var(--dim)">Setup check. The stage is at <a href="./" style="color:#e22">./</a>.</div>
 
   <h2>Connections</h2>
   <div id="status"></div>
@@ -51,7 +51,7 @@
   <h2>Events</h2>
   <div id="log"></div>
 </aside>
-<iframe id="preview" src="/site/" title="The website being built"></iframe>
+<iframe id="preview" src="site/" title="The website being built"></iframe>
 <script type="module">
   const $ = (id) => document.getElementById(id);
   const log = (text, cls = '') => {
@@ -68,7 +68,7 @@
   };
 
   async function status() {
-    const s = await fetch('/api/state').then((r) => r.json());
+    const s = await fetch('api/state').then((r) => r.json());
     const rows = [
       ['public address', s.tunnel || 'local only'],
       ['project', `${s.project} (${s.site.sections.length} sections)`],
@@ -89,7 +89,7 @@
   status();
 
   // Events from the bridge.
-  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${location.pathname.replace(/[^/]*$/, '')}ws`);
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.type === 'build') {
@@ -105,19 +105,19 @@
   $('image').onclick = async () => {
     log('picture requested');
     try {
-      const r = await post('/api/image', { prompt: $('prompt').value, aspect: '16:9' });
-      $('shot').src = `/site/${r.src}`;
+      const r = await post('api/image', { prompt: $('prompt').value, aspect: '16:9' });
+      $('shot').src = `site/${r.src}`;
       log(`picture in ${r.ms} ms from ${r.model}`, 'ok');
     } catch (error) { log(`picture failed: ${error.message}`, 'bad'); }
   };
-  $('design').onclick = () => post('/api/build', { key: 'design', brief: $('brief').value }).catch((e) => log(e.message, 'bad'));
-  $('build').onclick = () => post('/api/build', { key: 'structure', brief: $('brief').value }).catch((e) => log(e.message, 'bad'));
-  $('hero').onclick = () => post('/api/build', { key: 'hero', brief: `${$('brief').value} Include one generated picture.` }).catch((e) => log(e.message, 'bad'));
+  $('design').onclick = () => post('api/build', { key: 'design', brief: $('brief').value }).catch((e) => log(e.message, 'bad'));
+  $('build').onclick = () => post('api/build', { key: 'structure', brief: $('brief').value }).catch((e) => log(e.message, 'bad'));
+  $('hero').onclick = () => post('api/build', { key: 'hero', brief: `${$('brief').value} Include one generated picture.` }).catch((e) => log(e.message, 'bad'));
 
   // Gemini Live: mint a token, open the socket, ask for one sentence, play the audio.
   $('live').onclick = async () => {
     try {
-      const t = await post('/api/live-token', {});
+      const t = await post('api/live-token', {});
       // The real persona and tools now come with the token; answer every tool call with ok.
       log(`live token for ${t.model}`, 'ok');
       const audio = new AudioContext({ sampleRate: 24000 });
