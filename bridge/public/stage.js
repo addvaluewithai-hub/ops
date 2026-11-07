@@ -161,16 +161,42 @@ function internLine(text) {
   $('intern').querySelector('i').textContent = text;
 }
 // The spec checklist in the operator panel.
+const FIELDS = ['name', 'what', 'audience', 'goal', 'feeling', 'content', 'brand'];
+const shown = {};
 function showSpec(spec, missing) {
   const el = $('o-spec');
   el.innerHTML = '';
-  for (const id of ['name', 'what', 'audience', 'goal', 'feeling', 'content', 'brand']) {
+  for (const id of FIELDS) {
     const row = document.createElement('div');
     row.innerHTML = '<span></span><span></span>';
     row.children[0].textContent = id;
     row.children[1].textContent = spec[id] ? spec[id].slice(0, 28) : missing.includes(id) ? '?' : '';
     row.children[1].className = spec[id] ? 'ok' : 'bad';
     el.append(row);
+  }
+  // The brief on stage: every slot, lit as it is answered; a changed answer flashes again.
+  const brief = $('brief');
+  if (!brief.children.length)
+    for (const id of FIELDS) {
+      const slot = document.createElement('div');
+      slot.dataset.field = id;
+      slot.innerHTML = '<b></b><span></span>';
+      slot.querySelector('b').textContent = id;
+      brief.append(slot);
+    }
+  for (const slot of brief.children) {
+    const id = slot.dataset.field;
+    const value = spec[id] || '';
+    slot.classList.toggle('on', Boolean(value));
+    if (value && value !== shown[id]) {
+      slot.querySelector('span').textContent = value;
+      slot.classList.remove('fresh');
+      void slot.offsetWidth;
+      slot.classList.add('fresh');
+      if (shown[id] !== undefined) eye.gesture('glance');
+    }
+    if (!value) slot.querySelector('span').textContent = '';
+    shown[id] = value;
   }
 }
 
@@ -236,6 +262,7 @@ addEventListener('keydown', (e) => {
     captions = !captions;
     $('captions').style.display = captions ? '' : 'none';
   }
+  if (k === 'b') body.classList.toggle('nobrief');
   if (k === 'r') {
     live.close();
     live.connect().catch((err) => ops('o-live', err.message, 'bad'));

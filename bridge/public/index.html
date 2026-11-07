@@ -18,18 +18,16 @@
     transition: opacity 1.4s cubic-bezier(.2,.8,.2,1), transform 1.4s cubic-bezier(.2,.8,.2,1), filter 1.4s ease; pointer-events: none; }
   body.showing #site { opacity: 1; transform: none; filter: none; pointer-events: auto; }
   body.showing #site.reloading { opacity: .35; filter: blur(6px); transition-duration: .3s; }
-  /* A dark veil over the site so the eye stays readable; thins when SLOP looks at the site. */
-  #veil { position: fixed; inset: 0; pointer-events: none; opacity: 0;
-    background: radial-gradient(60% 60% at 80% 22%, rgba(0,0,0,.92), rgba(0,0,0,.35) 70%, rgba(0,0,0,.2));
-    transition: opacity 1.2s ease; }
-  body.showing #veil { opacity: 1; }
-  body.showing.at-site #veil { opacity: .5; }
+  /* No halo behind the tucked eye: on a light site any dark blob reads as a stain. The eye's
+     own drop shadow (below) is what separates it from the page. */
+  #veil { display: none; }
 
   /* The eye: centred and big while talking, tucked to the top right while the site shows. */
   #eye { position: fixed; left: 50%; top: 50%; width: min(70vmin, 720px); height: min(70vmin, 720px);
     transform: translate(-50%, -50%); transition: all 1.4s cubic-bezier(.2,.8,.2,1);
     filter: drop-shadow(0 0 60px rgba(224,38,31,.12)); }
-  body.showing #eye { left: calc(100% - 11vmin); top: 11vmin; width: 18vmin; height: 18vmin; transform: translate(-50%, -50%); }
+  body.showing #eye { left: calc(100% - 11vmin); top: 11vmin; width: 18vmin; height: 18vmin; transform: translate(-50%, -50%);
+    filter: drop-shadow(0 10px 22px rgba(0,0,0,.65)) drop-shadow(0 0 2px rgba(0,0,0,.5)); }
   body.furious #eye { filter: drop-shadow(0 0 90px rgba(224,38,31,.35)); }
   #eye canvas { width: 100%; height: 100%; display: block; transform-origin: 50% 50%; will-change: transform; }
 
@@ -37,14 +35,41 @@
   #breath { position: fixed; left: 50%; top: 50%; width: 90vmin; height: 90vmin; transform: translate(-50%, -50%);
     background: radial-gradient(circle, rgba(224,38,31,.10), transparent 60%); pointer-events: none;
     animation: breath 5s ease-in-out infinite; transition: opacity 1.4s; }
-  body.showing #breath { opacity: 0; }
+  body.showing #breath { opacity: 0; animation: none; }
   @keyframes breath { 50% { transform: translate(-50%, -50%) scale(1.12); opacity: .6; } }
+
+  /* The brief: the seven answers, filling in as he records them. On the left while he talks,
+     tucked to the bottom-left once the site shows. */
+  #brief { position: fixed; left: 5vw; top: 50%; transform: translateY(-50%); width: 24vw; max-width: 360px; min-width: 220px;
+    display: grid; gap: 14px; pointer-events: none; transition: all 1.4s cubic-bezier(.2,.8,.2,1); }
+  #brief div { display: grid; gap: 3px; opacity: .28; transition: opacity .8s; }
+  #brief div.on { opacity: 1; }
+  #brief b { font-size: 10px; letter-spacing: .32em; color: #777; font-weight: 600; }
+  #brief div.on b { color: var(--red); }
+  #brief span { font-size: 13px; color: #e8e8e8; line-height: 1.45; min-height: 1.45em; position: relative; }
+  #brief div:not(.on) span::before { content: ""; display: block; width: 44%; height: 1px; background: #333; margin-top: 9px; }
+  #brief div.fresh span { animation: brief-in .9s cubic-bezier(.2,.8,.2,1) both; }
+  #brief div.fresh b::after { content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 1px; background: var(--red);
+    transform-origin: left; animation: brief-line 1.1s ease-out both; }
+  #brief div { position: relative; }
+  @keyframes brief-in { from { opacity: 0; transform: translateX(-10px); filter: blur(4px); } }
+  @keyframes brief-line { 0% { transform: scaleX(0); } 60% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+  body.showing #brief { left: 2vmin; top: 2vmin; transform: none; width: 18vw; min-width: 180px; gap: 4px; opacity: .85;
+    padding: 10px 12px; background: rgba(8,8,8,.82); border-radius: 4px; pointer-events: none; }
+  body.showing #brief div { gap: 0; }
+  body.showing #brief div:not(.on) { display: none; }
+  body.showing #brief b { font-size: 9px; }
+  body.showing #brief span { font-size: 11px; color: #bbb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.nobrief #brief { display: none; }
 
   /* Captions: his words, then what he heard, at the bottom. */
   #captions { position: fixed; left: 0; right: 0; bottom: 6vh; text-align: center; pointer-events: none; padding: 0 10vw; }
   #said { font-size: clamp(16px, 2.2vmin, 26px); color: #eee; letter-spacing: .01em; text-shadow: 0 2px 20px #000;
     min-height: 1.5em; transition: opacity .3s; }
   #said:empty { opacity: 0; }
+  /* Over the site, his words sit on a dark strip so they read on any page. */
+  body.showing #said:not(:empty) { display: inline-block; background: rgba(8,8,8,.82); padding: 6px 18px; border-radius: 4px; text-shadow: none; }
+  body.showing #heard { color: #999; text-shadow: 0 1px 8px #000; }
   #heard { font-size: clamp(11px, 1.4vmin, 15px); color: #666; margin-top: 10px; min-height: 1.5em; }
 
   /* The intern's progress, small, under the eye while building. */
@@ -78,6 +103,7 @@
 <div id="breath"></div>
 <div id="eye"><canvas></canvas></div>
 <div id="intern"><b>intern</b><i></i></div>
+<div id="brief"></div>
 <div id="captions"><div id="said"></div><div id="heard"></div></div>
 <div id="ops"><h1>OPERATOR</h1>
   <div><span>voice</span><span id="o-live">off</span></div>
@@ -92,6 +118,7 @@
   <div><kbd>E</kbd> / <kbd>G</kbd><span>eye-roll / random gesture</span></div>
   <div><kbd>R</kbd><span>reconnect voice</span></div>
   <div><kbd>C</kbd><span>captions on / off</span></div>
+  <div><kbd>B</kbd><span>brief on / off</span></div>
   <div><a href="/" style="color:#888">← all sites</a><span></span></div>
 </div>
 <div id="gate"><span>WAKE HIM</span></div>
