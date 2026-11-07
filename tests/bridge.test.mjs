@@ -110,21 +110,22 @@ test('a build streams to the browser and its pictures are filled in', async () =
         if (event.type === 'media' && event.state !== 'start') resolve();
       }),
     );
-    const started = await fetch(`${base}/api/build`, {
-      method: 'POST',
-      headers: { cookie, 'content-type': 'application/json' },
-      body: JSON.stringify({ key: 'hero', brief: 'too short' }),
-    });
-    assert.equal(started.status, 400);
-    assert.match((await started.json()).error, /Spec incomplete/);
-    const started2 = await fetch(`${base}/api/build`, {
-      method: 'POST',
-      headers: { cookie, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        key: 'hero',
-        brief:
-          'A tiny late-night ramen bar called Slurp in Cairo. For hungry night owls who want to feel the loud Japanese street poster energy. Giant red title, one generated picture, the opening hours and a see-the-menu button.',
-      }),
+    const post = (path, body) =>
+      fetch(`${base}${path}`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    // The design step is refused while spec fields are missing, and the refusal names them.
+    let refused = await post('/api/build', { key: 'design', brief: 'Loud Japanese street poster energy, red and black.' });
+    assert.equal(refused.status, 400);
+    assert.match((await refused.json()).error, /name: What is it called\?.*audience/);
+    for (const [field, answer] of [['name', 'Slurp'], ['what', 'a late-night ramen bar in Cairo'], ['audience', 'night owls'], ['feeling', 'loud street poster']])
+      assert.equal((await post('/api/spec', { field, answer })).status, 200);
+    const spec = await (await post('/api/spec', { field: 'brand', answer: 'none' })).json();
+    assert.deepEqual(spec.missing, ['goal', 'content']);
+    // A section needs nothing beyond the structure, but a brief that says nothing is refused.
+    refused = await post('/api/build', { key: 'hero', brief: 'go' });
+    assert.match((await refused.json()).error, /brief is 1 words/);
+    const started2 = await post('/api/build', {
+      key: 'hero',
+      brief: 'Giant red title, one generated picture of a bowl, the opening hours and a see-the-menu button.',
     });
     assert.equal(started2.status, 202);
     await finished;

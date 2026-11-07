@@ -94,6 +94,7 @@ fetch('/api/state')
     if (remembered === '1' || (remembered === '' && (s.site.sections.length || s.design))) showSite(true);
     for (const key of Object.keys(s.building)) building.add(key);
     updateBuilding();
+    showSpec(s.spec ?? {}, s.missing ?? []);
   })
   .catch(() => {});
 
@@ -116,6 +117,17 @@ const live = createLive({
         ? { ok: true, scheduling: 'SILENT' }
         : { error: `unknown mood; use one of ${Object.keys(MOODS).join(', ')}` };
     if (name === 'look_at') return { ok: lookAt(String(args.target ?? 'user')), scheduling: 'SILENT' };
+    if (name === 'note_spec') {
+      const r = await fetch('/api/spec', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ field: args.field, answer: args.answer }),
+      });
+      const data = await r.json();
+      if (!r.ok) return { error: data.error };
+      showSpec(data.spec, data.missing);
+      return { recorded: args.field, missing: data.missing, scheduling: 'SILENT' };
+    }
     if (name === 'show_site') {
       showSite(Boolean(args.visible));
       return { ok: true, scheduling: 'SILENT' };
@@ -147,6 +159,20 @@ const live = createLive({
 function internLine(text) {
   $('intern').querySelector('i').textContent = text;
 }
+// The spec checklist in the operator panel.
+function showSpec(spec, missing) {
+  const el = $('o-spec');
+  el.innerHTML = '';
+  for (const id of ['name', 'what', 'audience', 'goal', 'feeling', 'content', 'brand']) {
+    const row = document.createElement('div');
+    row.innerHTML = '<span></span><span></span>';
+    row.children[0].textContent = id;
+    row.children[1].textContent = spec[id] ? spec[id].slice(0, 28) : missing.includes(id) ? '?' : '';
+    row.children[1].className = spec[id] ? 'ok' : 'bad';
+    el.append(row);
+  }
+}
+
 function updateBuilding() {
   body.classList.toggle('building', building.size > 0);
   ops('o-building', [...building].join(', ') || '–');
@@ -178,7 +204,7 @@ function connectBridge() {
     } else if (m.type === 'media' && m.kind === 'image') {
       if (m.state === 'done') live.note(`[PICTURE LANDED in ${m.file}] ${m.prompt.slice(0, 80)}`);
       if (m.state === 'error') live.note(`[PICTURE REFUSED in ${m.file}] ${m.error.slice(0, 120)}`);
-    }
+    } else if (m.type === 'spec') showSpec(m.spec, m.missing);
   };
   ws.onclose = () => setTimeout(connectBridge, 2000);
 }
