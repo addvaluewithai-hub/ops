@@ -19,7 +19,6 @@ export function bridgeConfig(env = process.env) {
     claudeMaxTurns: Number(env.CLAUDE_MAX_TURNS) || 60,
     claudeTimeoutMs: Number(env.CLAUDE_TIMEOUT_MS) || 15 * 60 * 1000,
     projectsDir: env.PROJECTS_DIR || join(homedir(), 'projects'),
-    project: env.PROJECT || 'demo',
     // quick: a free trycloudflare.com address, announced to the Pages site. off: none.
     tunnel: env.TUNNEL === 'off' ? 'off' : 'quick',
     cloudflaredBin: env.CLOUDFLARED_BIN || 'cloudflared',

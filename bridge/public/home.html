@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>SLOP</title>
+<style>
+  :root { color-scheme: dark; --red: #e0261f; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: #000; color: #cfcfcf; font: 13px/1.5 var(--mono); }
+  main { max-width: 1100px; margin: 0 auto; padding: 8vh 24px 10vh; }
+  h1 { color: var(--red); letter-spacing: .6em; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #555; margin-bottom: 6vh; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .card { display: block; color: inherit; text-decoration: none; border: 1px solid #1f1f1f; padding: 18px 18px 16px; min-height: 150px;
+    position: relative; transition: border-color .25s, transform .25s; background: #050505; }
+  .card:hover { border-color: #444; transform: translateY(-2px); }
+  .card h2 { margin: 0 0 4px; font-size: 20px; font-weight: 600; color: #eee; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .name { color: #555; font-size: 11px; margin-bottom: 16px; }
+  .steps { display: flex; gap: 6px; margin-bottom: 10px; }
+  .steps i { display: block; height: 4px; flex: 1; background: #1c1c1c; }
+  .steps i.on { background: #777; } .steps i.live { background: var(--red); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .meta { color: #666; font-size: 11px; display: flex; justify-content: space-between; }
+  .new { border-style: dashed; display: grid; place-items: center; cursor: text; }
+  .new form { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .new span { color: #666; letter-spacing: .3em; font-size: 11px; text-align: center; }
+  input, button { background: #0d0d0d; color: #ddd; border: 1px solid #333; padding: 10px 12px; font: inherit; border-radius: 0; width: 100%; }
+  input:focus, button:hover { border-color: var(--red); outline: none; }
+  button { cursor: pointer; }
+  .err { color: var(--red); font-size: 11px; min-height: 1.4em; }
+  .foot { margin-top: 8vh; color: #444; font-size: 11px; }
+  .foot a { color: #666; }
+</style>
+</head>
+<body>
+<main>
+  <h1>S.L.O.P.</h1>
+  <div class="sub">Pick a site to continue, or start one. He remembers each.</div>
+  <div class="grid" id="grid">
+    <div class="card new"><form id="form">
+      <span>NEW SITE</span>
+      <input id="name" placeholder="a-short-name" autocomplete="off" spellcheck="false" pattern="[a-z0-9][a-z0-9-]{0,39}" required>
+      <button>Start</button>
+      <div class="err" id="err"></div>
+    </form></div>
+  </div>
+  <div class="foot" id="foot"></div>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const ago = (ms) => {
+    if (!ms) return 'empty';
+    const m = Math.round((Date.now() - ms) / 60000);
+    return m < 2 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+  };
+  async function load() {
+    const { projects, tunnel } = await fetch('/api/projects', { cache: 'no-store' }).then((r) => r.json());
+    document.querySelectorAll('.card:not(.new)').forEach((c) => c.remove());
+    for (const p of projects) {
+      const a = document.createElement('a');
+      a.className = 'card';
+      a.href = `/p/${p.name}/`;
+      const steps = [p.specDone, p.design, p.sections > 0, p.sections > 0 && p.built === p.sections];
+      a.innerHTML = `<h2></h2><div class="name"></div><div class="steps">${steps.map(() => '<i></i>').join('')}</div><div class="meta"><span></span><span></span></div>`;
+      a.querySelector('h2').textContent = p.title;
+      a.querySelector('.name').textContent = `/${p.name}`;
+      a.querySelectorAll('.steps i').forEach((i, n) => { if (steps[n]) i.classList.add('on'); });
+      if (p.building.length) a.querySelector('.steps i:nth-child(3)').classList.add('live');
+      const stage = p.building.length ? `building ${p.building.join(', ')}` : !p.specDone ? 'spec' : !p.design ? 'design' : !p.sections ? 'structure' : p.built < p.sections ? `${p.built}/${p.sections} sections` : 'done';
+      a.querySelector('.meta span:first-child').textContent = stage;
+      a.querySelector('.meta span:last-child').textContent = ago(p.updated);
+      $('grid').insertBefore(a, $('grid').lastElementChild);
+    }
+    $('foot').textContent = tunnel ? `public address ${tunnel}` : 'local only';
+  }
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('name').value.trim().toLowerCase();
+    const r = await fetch('/api/projects', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }) });
+    const data = await r.json();
+    if (!r.ok) return ($('err').textContent = data.error);
+    location.href = `/p/${data.name}/`;
+  });
+  load();
+  setInterval(load, 15000);
+</script>
+</body>
+</html>

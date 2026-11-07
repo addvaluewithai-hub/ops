@@ -17,7 +17,8 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
   let mic = null;
   // The resumption handle lives in sessionStorage, so a page refresh continues the same
   // conversation instead of waking him up again.
-  let resumeHandle = sessionStorage.getItem('slop-resume') || null;
+  const RESUME = `slop-resume:${location.pathname}`;
+  let resumeHandle = sessionStorage.getItem(RESUME) || null;
   let ready = false;
   const state = (s, detail) => onState?.(s, detail);
 
@@ -93,7 +94,7 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
       levelBuf = new Float32Array(analyser.fftSize);
     }
     await out.resume();
-    const t = await fetch('/api/live-token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+    const t = await fetch('api/live-token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
       .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json()).error || r.status))));
     socket = new WebSocket(`${WS}?access_token=${encodeURIComponent(t.token)}`);
     socket.onopen = () =>
@@ -113,7 +114,7 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
       }
       if (m.sessionResumptionUpdate?.resumable && m.sessionResumptionUpdate.newHandle) {
         resumeHandle = m.sessionResumptionUpdate.newHandle;
-        sessionStorage.setItem('slop-resume', resumeHandle);
+        sessionStorage.setItem(RESUME, resumeHandle);
       }
       if (m.error) state('error', m.error.message ?? JSON.stringify(m.error));
       const c = m.serverContent;
@@ -147,7 +148,7 @@ export function createLive({ onTool, onSaid, onHeard, onLevel, onState, onInterr
       // A refused resume (an expired handle) must not loop: start fresh next time.
       if (e.code === 1007 || e.code === 1008) {
         resumeHandle = null;
-        sessionStorage.removeItem('slop-resume');
+        sessionStorage.removeItem(RESUME);
       }
       state('closed', `${e.code} ${e.reason}`);
     };
