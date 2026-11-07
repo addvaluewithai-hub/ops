@@ -74,7 +74,7 @@ swap in place with a short develop reveal, pictures fade in when they arrive, an
 ## Status
 
 - [x] Infrastructure: bridge, slop-media, Pages redirect, setup check page
-- [x] The eye: WebGL eyeball with moods and gestures, idle behaviour, voice-driven every frame
+- [x] The eye: a flat graphic mark (almond, big iris, one eyebrow, a red ring for the voice) with moods and gestures, idle behaviour, voice-driven every frame
 - [x] SLOP's persona and tools on Gemini Live, non-blocking builds with live intern notes
 - [ ] Webcam head tracking; SLOP sees screenshots of what the intern built
 - [ ] Clips in sections (poster first, Veo after), choreography pass, ship to Pages
