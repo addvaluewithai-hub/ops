@@ -15,6 +15,7 @@
 //   POST /p/<name>/api/video    { prompt, aspect, seconds, image }: one clip into video/
 //   WS   /p/<name>/ws           every event of that site: build steps, files, pictures, clips
 import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { join as joinPath } from 'node:path';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -72,9 +73,23 @@ export function createBridge({ config, projectsDir, media, fetcher = fetch, spaw
     if (projects.has(name)) return projects.get(name);
     const dir = join(projectsDir, name);
     await ensureProject(dir);
-    const p = { name, dir, building: new Map() };
+    const p = { name, dir, building: new Map(), seen: new Map() };
     p.watcher = watchProject(dir, (path) => broadcast(name, { type: 'file', path }));
     p.watcher.unref?.();
+    // Fallback to the watcher: every 2 s, while anyone is listening, compare the mtimes of the
+    // files the preview cares about and announce what changed.
+    p.poll = setInterval(async () => {
+      if (![...(wss?.clients ?? [])].some((c) => c.project === name && c.readyState === 1)) return;
+      const files = ['site.json', 'tokens.css', 'scripts.js'];
+      for (const f of await readdir(joinPath(dir, 'sections')).catch(() => [])) if (f.endsWith('.html')) files.push(`sections/${f}`);
+      for (const f of files) {
+        const m = await stat(joinPath(dir, f)).then((s) => s.mtimeMs, () => 0);
+        const was = p.seen.get(f);
+        p.seen.set(f, m);
+        if (was !== undefined && m !== was) broadcast(name, { type: 'file', path: f, via: 'poll' });
+      }
+    }, 2000);
+    p.poll.unref?.();
     projects.set(name, p);
     return p;
   }
@@ -312,8 +327,17 @@ export function createBridge({ config, projectsDir, media, fetcher = fetch, spaw
     });
   });
 
+  // Keep sockets alive through proxies that drop idle connections (the tunnel does).
+  const heartbeat = setInterval(() => {
+    for (const client of wss?.clients ?? []) if (client.readyState === 1) client.ping();
+  }, 25_000);
+  heartbeat.unref?.();
   const close = () => {
-    for (const p of projects.values()) p.watcher.close();
+    clearInterval(heartbeat);
+    for (const p of projects.values()) {
+      p.watcher.close();
+      clearInterval(p.poll);
+    }
     wss.close();
     server.close();
   };

@@ -234,6 +234,18 @@ function connectBridge() {
     } else if (m.type === 'spec') showSpec(m.spec, m.missing);
   };
   ws.onclose = () => setTimeout(connectBridge, 2000);
+  // After a drop, catch up on what changed while we were deaf.
+  ws.onopen = () => {
+    if (!connectBridge.first) return (connectBridge.first = true);
+    fetch('api/state')
+      .then((r) => r.json())
+      .then((s) => {
+        showSpec(s.spec ?? {}, s.missing ?? []);
+        building = new Set(Object.keys(s.building));
+        updateBuilding();
+      })
+      .catch(() => {});
+  };
 }
 connectBridge();
 
