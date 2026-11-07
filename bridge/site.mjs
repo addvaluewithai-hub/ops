@@ -186,15 +186,31 @@ function restyle(){
   const old=document.querySelector('link[data-slop-tokens]');const l=document.createElement('link');l.rel='stylesheet';l.dataset.slopTokens='1';
   l.href='tokens.css?v='+Date.now();l.onload=()=>{old&&old.remove();if(document.querySelector('[data-slop-section="design"]'))swap('design');};document.head.append(l);
 }
-const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+location.pathname.replace(/site\\/.*$/,'ws'));
-ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.type!=='file')return;
-  const sec=/^sections\\/([a-z0-9-]+)\\.html$/.exec(m.path);
-  const later=(key,fn,ms)=>{clearTimeout(timers.get(key));timers.set(key,setTimeout(fn,ms));};
-  if(sec)return later(sec[1],()=>swap(sec[1]),150);
-  if(m.path==='tokens.css')return later('tokens',document.querySelector('[data-slop-section]')?restyle:reload,150);
-  if(m.path==='site.json')return later('site',()=>document.querySelector('[data-slop-section]')?reload():reload(),150);
-  if(m.path==='scripts.js')return later('scripts',reload,150);
-};
+// After a dropped socket, anything may have changed: compare every section and swap the ones that did.
+async function resync(){
+  const html=await (await fetch('./',{cache:'no-store'})).text();
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const ids=[...doc.querySelectorAll('[data-slop-section]')].map(e=>e.dataset.slopSection);
+  const here=[...document.querySelectorAll('[data-slop-section]')].map(e=>e.dataset.slopSection);
+  if(ids.join()!==here.join())return reload();
+  for(const id of ids){const a=doc.querySelector('[data-slop-section="'+id+'"]'),b=document.querySelector('[data-slop-section="'+id+'"]');if(norm(a)!==norm(b)||a.innerHTML!==b.innerHTML)swap(id);}
+  restyle();
+}
+let dropped=false;
+function connect(){
+  const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+location.pathname.replace(/site\\/.*$/,'ws'));
+  ws.onopen=()=>{if(dropped)resync();dropped=false;};
+  ws.onclose=()=>{dropped=true;setTimeout(connect,1500);};
+  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.type!=='file')return;
+    const sec=/^sections\\/([a-z0-9-]+)\\.html$/.exec(m.path);
+    const later=(key,fn,ms)=>{clearTimeout(timers.get(key));timers.set(key,setTimeout(fn,ms));};
+    if(sec)return later(sec[1],()=>swap(sec[1]),150);
+    if(m.path==='tokens.css')return later('tokens',document.querySelector('[data-slop-section]')?restyle:reload,150);
+    if(m.path==='site.json')return later('site',reload,150);
+    if(m.path==='scripts.js')return later('scripts',reload,150);
+  };
+}
+connect();
 addEventListener('message',e=>{const m=e.data;if(!m||!m.slop)return;
   if(m.type==='scrollTo'){const el=document.querySelector('[data-slop-section="'+m.id+'"]');el&&el.scrollIntoView({behavior:'smooth',block:'start'});}});
 const seen=new IntersectionObserver(es=>{for(const x of es)if(x.isIntersecting)tell({type:'visible',id:x.target.dataset.slopSection});},{threshold:.5});
