@@ -5,6 +5,7 @@
 //   GET  /site/...        the website being built, assembled live
 //   GET  /api/state       project, sections, what is building, the public address
 //   POST /api/live-token  a single-use Gemini Live token with SLOP's persona and tools
+//   POST /api/spec        { field, answer }: one spec answer recorded (SLOP's note_spec tool)
 //   POST /api/build       { key, brief }: the intern starts now (SLOP's build tool)
 //   POST /api/image       { prompt, aspect }: one picture into img/
 //   POST /api/video       { prompt, aspect, seconds, image }: one clip into video/
@@ -19,6 +20,7 @@ import { build } from './claude.mjs';
 import { liveSetup, mintLiveToken } from './live.mjs';
 import { EXT, fillImages, mediaName } from './media.mjs';
 import { assemble, projectPath, readSite, serveFile } from './site.mjs';
+import { isField, missingAll, readSpec, writeSpec } from './spec.mjs';
 import { TOOLS, internPrompt, projectNote, refuseBuild } from './tools.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -118,6 +120,8 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
         site: await readSite(dir),
         building: Object.fromEntries(building),
         design: await readFile(join(dir, 'tokens.css'), 'utf8').then(Boolean, () => false),
+        spec: await readSpec(dir),
+        missing: missingAll(await readSpec(dir)),
         tunnel: state.tunnelUrl,
         media: Boolean(config.mediaUrl),
         live: Boolean(config.geminiKey),
@@ -126,7 +130,7 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
     const input = await body(req);
     if (path === '/api/live-token') {
       const hasDesign = await readFile(join(dir, 'tokens.css'), 'utf8').then(Boolean, () => false);
-      const note = projectNote(await readSite(dir), await builtSections(), hasDesign);
+      const note = projectNote(await readSite(dir), await builtSections(), hasDesign, await readSpec(dir));
       const setup = liveSetup({
         instruction: `${await persona()}\n\n## Right now\n\n${note}`,
         voice: input.voice || config.voice,
@@ -134,13 +138,25 @@ export function createBridge({ config, dir, media, fetcher = fetch, spawner }) {
       });
       return json(res, 200, await mintLiveToken({ key: config.geminiKey, model: config.liveModel, setup }, fetcher));
     }
+    if (path === '/api/spec') {
+      const field = String(input.field ?? '');
+      if (!isField(field)) return json(res, 400, { error: `unknown field ${field}` });
+      const spec = await readSpec(dir);
+      const answer = String(input.answer ?? '').trim();
+      if (answer) spec[field] = answer.slice(0, 400);
+      else delete spec[field];
+      await writeSpec(dir, spec);
+      broadcast({ type: 'spec', spec, missing: missingAll(spec) });
+      return json(res, 200, { spec, missing: missingAll(spec) });
+    }
     if (path === '/api/build') {
       const key = String(input.key ?? '');
       const brief = String(input.brief ?? input.prompt ?? '');
-      const refused = refuseBuild({ key, brief });
+      const spec = await readSpec(dir);
+      const refused = refuseBuild({ key, brief, spec });
       if (refused) return json(res, 400, { error: refused });
       if (building.has(key)) return json(res, 409, { error: `${key} is already building`, id: building.get(key) });
-      return json(res, 202, { id: startBuild(key, internPrompt({ key, brief })) });
+      return json(res, 202, { id: startBuild(key, internPrompt({ key, brief, spec })) });
     }
     if (path === '/api/image') {
       if (!input.prompt) return json(res, 400, { error: 'prompt is required' });

@@ -1,11 +1,28 @@
 // What SLOP can do, as Gemini Live function declarations (live.mjs turns them into Gemini's
 // shape). None of them block: the bridge answers at once and sends the outcome later as a note.
 import { SECTION_ID, STEPS } from './site.mjs';
+import { SPEC_FIELDS, missingAll, missingFor, specText } from './spec.mjs';
 
 export const MOODS = ['smug', 'deadpan', 'bored', 'suspicious', 'contempt', 'thinking', 'angry', 'furious', 'surprised', 'pleased', 'calm'];
 export const GESTURES = ['eyeroll', 'glance', 'slowblink', 'squint', 'doubletake', 'wide'];
 
 export const TOOLS = [
+  {
+    name: 'note_spec',
+    description:
+      'Record one answer to the spec the moment you hear it, whether you asked for it or the ' +
+      'human volunteered it. Call it silently, one field per call. The reply lists what is ' +
+      'still missing, so you know what to ask next. Fields: ' +
+      SPEC_FIELDS.map((f) => `${f.id} (${f.question})`).join('; '),
+    parameters: {
+      type: 'object',
+      properties: {
+        field: { type: 'string', enum: SPEC_FIELDS.map((f) => f.id) },
+        answer: { type: 'string', description: 'The answer in a few words, in English. "none" is a valid answer for brand.' },
+      },
+      required: ['field', 'answer'],
+    },
+  },
   {
     name: 'set_mood',
     description:
@@ -42,7 +59,8 @@ export const TOOLS = [
       'wireframe of every section (layout, proportions, where the picture and headline go); a ' +
       'section id (lowercase, hyphens: hero, menu, story, visit) replaces that wireframe with the ' +
       'real section; key "scripts" writes the scroll choreography between sections at the end. Returns ' +
-      'at once; you are told when it is done. Refused without a real brief.',
+      'at once; you are told when it is done. "design" and "structure" are refused while spec ' +
+      'fields are missing; the refusal names them, so ask those.',
     parameters: {
       type: 'object',
       properties: {
@@ -50,8 +68,9 @@ export const TOOLS = [
         brief: {
           type: 'string',
           description:
-            'The full brief for the intern, in English: audience, goal, feeling, content, ' +
-            'art direction, and for a section exactly what goes in it. For a change: what to ' +
+            'The brief for the intern, in English. The recorded spec is attached automatically, ' +
+            'so say what this step needs: art direction for the design, the sections and their ' +
+            'ideas for the structure, exactly what goes in a section. For a change: what to ' +
             'change and what to keep.',
         },
       },
@@ -71,17 +90,25 @@ export const TOOLS = [
 
 export const buildKey = (key) => STEPS.has(key) || SECTION_ID.test(String(key));
 
-/** Why a build call is refused, or '' when it may go ahead. SLOP reads this out, so it is in character. */
-export function refuseBuild({ key, brief }) {
+/** Why a build call is refused, or '' when it may go ahead. SLOP reads this out, so it names the gap. */
+export function refuseBuild({ key, brief, spec = {} }) {
   if (!buildKey(key)) return `"${key}" is not a section id. Lowercase words and hyphens.`;
+  const missing = missingFor(key, spec);
+  if (missing.length) {
+    const asks = SPEC_FIELDS.filter((f) => missing.includes(f.id)).map((f) => `${f.id}: ${f.question}`);
+    return `Not yet. Still unanswered: ${asks.join(' ')} Ask, or record what you already heard with note_spec.`;
+  }
   const words = String(brief ?? '').trim().split(/\s+/).filter(Boolean).length;
-  if (words < 25)
-    return `Spec incomplete: ${words} words. Who is it for, what should they do, what should it feel like, what goes in it.`;
+  if (words < 8) return `The brief is ${words} words. Say what this step should be.`;
   return '';
 }
 
-/** The intern's prompt for one build call. */
-export function internPrompt({ key, brief }) {
+/** The intern's prompt for one build call: the task, the brief, and the recorded spec. */
+export function internPrompt({ key, brief, spec = {} }) {
+  return `${taskPrompt({ key, brief })}\n\nClient spec (recorded by SLOP):\n${specText(spec)}`;
+}
+
+function taskPrompt({ key, brief }) {
   if (key === 'design')
     return `Design task. Write tokens.css: the complete design system this site will use. Follow the "Design task" rules in your brief (the required variable names, fonts via @import, base element styles). Also set "title" in site.json to the site's name (keep any other fields). Nothing else.\n\nBrief: ${brief}`;
   if (key === 'structure' || key === 'site')
@@ -92,10 +119,15 @@ export function internPrompt({ key, brief }) {
 }
 
 /** What the session's system instruction says about the project right now. */
-export function projectNote(site, existing, hasDesign) {
-  if (!hasDesign && !site.sections.length) return 'The project is empty: nothing has been built yet. Start with the spec, then "design".';
+export function projectNote(site, existing, hasDesign, spec = {}) {
+  const missing = missingAll(spec);
+  const specNote = `Spec so far:\n${specText(spec)}\n${
+    missing.length ? `Still unanswered: ${missing.join(', ')}.` : 'The spec is complete.'
+  }`;
+  if (!hasDesign && !site.sections.length)
+    return `${specNote}\nNothing has been built yet. Get the spec, then "design".`;
   const lines = site.sections.map((id) => `${id}: ${existing.has(id) ? 'built' : 'wireframe only'}${site.plan[id] ? ` (plan: ${site.plan[id]})` : ''}`);
-  return `${hasDesign ? 'The design system exists.' : 'There is no design system yet.'} ${
+  return `${specNote}\n${hasDesign ? 'The design system exists.' : 'There is no design system yet.'} ${
     site.sections.length ? `The project "${site.title}" has these sections, in order:\n${lines.join('\n')}` : 'There is no structure yet.'
   }`;
 }
